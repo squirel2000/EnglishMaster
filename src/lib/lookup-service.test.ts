@@ -74,6 +74,7 @@ describe('lookupTerm', () => {
     vi.mocked(lookupWiktionary).mockResolvedValue(makeResult(['x', 'y']));
     const outcome = await lookupTerm('hello');
     expect(outcome.ok).toBe(true);
+    expect(lookupWiktionary).toHaveBeenCalledWith('hello', expect.anything());
   });
 
   it('returns not-found when all sources have no entry', async () => {
