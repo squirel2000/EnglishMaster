@@ -1,13 +1,27 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  # EnglishMaster
+  網頁版英語學習平台（English learning web application）。
+  目標使用者：想提升英語能力的中文母語學習者。
+  核心功能方向：查詢單字、片語或整句，提供美式（US）發音與 2-3 個例句。
+
+  ## Tech stack
+  - TypeScript（strict mode）
+  - Next.js（App Router）+ React
+  - 測試：Vitest + React Testing Library，採 TDD（先寫測試再實作）
+  - Lint/Format：ESLint + Prettier
+
+  ## Conventions
+  - Conventional Commits（feat:/fix:/docs:/test:/refactor:/chore:）
+  - TDD：任何功能先寫失敗測試，再寫實作
+  - 語言約定：文件（含 OpenSpec 提案、README）用繁體中文；
+    程式碼、註解、識別字、commit message 一律用英文
+  - 測試檔與原始碼同目錄放置（*.test.ts / *.test.tsx）
+  - 分支策略：main 為發布分支，develop 為整合分支，
+    功能開發用 feature/<name> 分支
+  - 元件用 PascalCase，函式與變數用 camelCase，檔名用 kebab-case
+    （React 元件檔除外，用 PascalCase.tsx）
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
