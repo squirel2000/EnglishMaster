@@ -10,7 +10,7 @@ export function TranslationResultView({ result }: TranslationResultViewProps) {
     <section className="sentence-card">
       <div className="sentence-head">
         <div className="entry-section">
-          <h3 className="eyebrow">原句</h3>
+          <p className="eyebrow">原句</p>
           <h2 className="sentence-original" lang="en">
             {result.original}
           </h2>
