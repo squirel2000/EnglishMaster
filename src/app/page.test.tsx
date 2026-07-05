@@ -84,6 +84,23 @@ describe('Home page', () => {
     expect(await screen.findByText('你好')).toBeInTheDocument();
   });
 
+  it('switches a sentence result back to dictionary lookup on demand', async () => {
+    stubFetchRoutes({
+      '/api/translate': {
+        status: 200,
+        body: { original: 'Give up!', translated: '放棄！' },
+      },
+      '/api/lookup': { status: 200, body: lookupBody },
+    });
+    render(<Home />);
+    await userEvent.type(screen.getByRole('textbox'), 'Give up!{enter}');
+    await screen.findByText('放棄！');
+    await userEvent.click(screen.getByRole('button', { name: '改查字典' }));
+    expect(
+      await screen.findByRole('heading', { name: 'hello' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the quota message when translation quota is exhausted', async () => {
     stubFetchRoutes({
       '/api/translate': { status: 429, body: { error: 'quota-exhausted' } },
