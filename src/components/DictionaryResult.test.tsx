@@ -16,6 +16,7 @@ const sample: LookupResult = {
   ],
   synonyms: ['surrender', 'quit', 'abandon'],
   antonyms: ['persist', 'continue'],
+  relatedPhrases: ['give in', 'give up the ghost', 'give away'],
   source: 'free-dictionary',
 };
 
@@ -133,6 +134,30 @@ describe('DictionaryResult', () => {
     render(<DictionaryResult result={{ ...sample, antonyms: [] }} />);
     expect(screen.queryByText('反義')).not.toBeInTheDocument();
     expect(screen.getByText('同義')).toBeInTheDocument();
+  });
+
+  it('renders the related-phrases section last, after the antonyms', () => {
+    render(<DictionaryResult result={sample} />);
+    expect(screen.getByText('片語')).toBeInTheDocument();
+    for (const phrase of ['give in', 'give up the ghost', 'give away']) {
+      expect(screen.getByText(phrase)).toBeInTheDocument();
+    }
+    expect(screen.getByText('give up the ghost')).toHaveAttribute('lang', 'en');
+    // Card order ends: ...antonyms, then related phrases.
+    const antonymsHeading = screen.getByText('反義');
+    const phrasesHeading = screen.getByText('片語');
+    expect(
+      antonymsHeading.compareDocumentPosition(phrasesHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('omits the related-phrases section when the list is empty', () => {
+    render(<DictionaryResult result={{ ...sample, relatedPhrases: [] }} />);
+    expect(screen.queryByText('片語')).not.toBeInTheDocument();
+    // Neighboring sections are guarded independently and stay visible.
+    expect(screen.getByText('同義')).toBeInTheDocument();
+    expect(screen.getByText('反義')).toBeInTheDocument();
   });
 
   it('tags English and Chinese lines with lang attributes', () => {

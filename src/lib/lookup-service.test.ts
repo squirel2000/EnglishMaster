@@ -3,12 +3,14 @@ import { lookupTerm } from './lookup-service';
 import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
+import { fetchRelatedPhrases } from './datamuse-api';
 import { translateSegment } from './translation-api';
 import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
 
 vi.mock('./dictionary-api');
 vi.mock('./wiktionary-api');
 vi.mock('./tatoeba-api');
+vi.mock('./datamuse-api');
 vi.mock('./translation-api');
 
 const surrenderOnly: DefinitionEntry[] = [
@@ -29,8 +31,12 @@ function makeResult(
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
     examples: toExamples(examples),
-    synonyms: [],
-    antonyms: [],
+    // Non-empty on purpose: together with the exact translation batch-count
+    // assertions below, these prove thesaurus words never enter the batch.
+    synonyms: ['syn'],
+    antonyms: ['ant'],
+    // Normalizers always emit an empty list; Datamuse fills it later.
+    relatedPhrases: [],
     source: 'free-dictionary',
   };
 }
@@ -43,6 +49,9 @@ beforeEach(() => {
     ok: false,
     error: 'service-unavailable',
   });
+  // Non-empty on purpose: together with the exact translation batch-count
+  // assertions below, this proves phrases never enter the translation batch.
+  vi.mocked(fetchRelatedPhrases).mockResolvedValue(['give in', 'give away']);
 });
 
 describe('lookupTerm', () => {
@@ -53,8 +62,16 @@ describe('lookupTerm', () => {
     const outcome = await lookupTerm('give up');
     expect(outcome).toEqual({
       ok: true,
-      result: expect.objectContaining({ examples: toExamples(['a', 'b', 'c']) }),
+      result: expect.objectContaining({
+        examples: toExamples(['a', 'b', 'c']),
+        // Thesaurus lists pass through untouched (and untranslated).
+        synonyms: ['syn'],
+        antonyms: ['ant'],
+        // Datamuse phrases attach untranslated, capped at 6 by the fetch.
+        relatedPhrases: ['give in', 'give away'],
+      }),
     });
+    expect(fetchRelatedPhrases).toHaveBeenCalledWith('give up', 6);
     expect(fetchTatoebaExamples).not.toHaveBeenCalled();
     expect(lookupWiktionary).not.toHaveBeenCalled();
   });
@@ -240,6 +257,8 @@ describe('lookupTerm definition enrichment', () => {
     if (outcome.ok) {
       expect(outcome.result.source).toBe('wiktionary');
       expect(outcome.result.definitions[0].definitionZh).toBe('放棄。');
+      // Phrase enrichment is source-independent and runs on fallback too.
+      expect(outcome.result.relatedPhrases).toEqual(['give in', 'give away']);
     }
   });
 });
@@ -330,6 +349,9 @@ describe('lookupTerm example enrichment', () => {
     releaseAll();
     const outcome = await pending;
     expect(issued).toBe(expectedSegments);
+    // The Datamuse phrases (mocked non-empty) never enter the batch.
+    expect(translateSegment).not.toHaveBeenCalledWith('give in');
+    expect(translateSegment).not.toHaveBeenCalledWith('give away');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.result.definitions.map((d) => d.definitionZh)).toEqual([
@@ -340,6 +362,74 @@ describe('lookupTerm example enrichment', () => {
         '中文：Ex one.',
         '中文：Ex two.',
       ]);
+    }
+  });
+});
+
+describe('lookupTerm related-phrase enrichment', () => {
+  it('fetches related phrases in parallel with the translation batch, not after it', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'b']));
+    // Hold both enrichment arms open and require each to have started while
+    // the other is still unresolved. A sequential implementation stalls one
+    // side and fails the waitFor with a clear diff.
+    let phrasesRequested = false;
+    let releasePhrases!: () => void;
+    const phrasesGate = new Promise<void>((resolve) => {
+      releasePhrases = resolve;
+    });
+    vi.mocked(fetchRelatedPhrases).mockImplementation(async () => {
+      phrasesRequested = true;
+      await phrasesGate;
+      return ['give in'];
+    });
+    let segmentsIssued = 0;
+    let releaseSegments!: () => void;
+    const segmentsGate = new Promise<void>((resolve) => {
+      releaseSegments = resolve;
+    });
+    vi.mocked(translateSegment).mockImplementation(async (text) => {
+      segmentsIssued += 1;
+      await segmentsGate;
+      return { ok: true, result: { original: text, translated: `中文：${text}` } };
+    });
+    const pending = lookupTerm('give up');
+    await vi.waitFor(() => {
+      expect(phrasesRequested).toBe(true);
+      expect(segmentsIssued).toBe(3); // 1 definition + 2 examples
+    });
+    releaseSegments();
+    releasePhrases();
+    const outcome = await pending;
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.relatedPhrases).toEqual(['give in']);
+      expect(outcome.result.definitions[0].definitionZh).toBe('中文：To surrender.');
+    }
+  });
+
+  it('keeps the lookup and returns empty phrases when the phrase source rejects unexpectedly', async () => {
+    // The module contract is to resolve [] on failure; the orchestration
+    // still isolates a rejection so no enrichment arm can sink the lookup.
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'b']));
+    vi.mocked(fetchRelatedPhrases).mockRejectedValue(new Error('down'));
+    const outcome = await lookupTerm('give up');
+    expect(fetchRelatedPhrases).toHaveBeenCalledWith('give up', 6);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.relatedPhrases).toEqual([]);
+      expect(outcome.result.definitions).toEqual(surrenderOnly);
+      expect(outcome.result.examples).toEqual(toExamples(['a', 'b']));
+    }
+  });
+
+  it('keeps related phrases when translation is unavailable', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'b']));
+    // beforeEach default: every translateSegment call is service-unavailable.
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.relatedPhrases).toEqual(['give in', 'give away']);
+      expect(outcome.result.definitions[0].definitionZh).toBeNull();
     }
   });
 });

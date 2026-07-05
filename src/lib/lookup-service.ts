@@ -1,6 +1,7 @@
 import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
+import { fetchRelatedPhrases } from './datamuse-api';
 import { translateSegment } from './translation-api';
 import type { ExampleEntry, LookupErrorCode, LookupResult } from './types';
 import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
@@ -8,6 +9,7 @@ import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 const MIN_EXAMPLES = 2;
 const MAX_EXAMPLES = 3;
 const MAX_DEFINITIONS = 5;
+const MAX_RELATED_PHRASES = 6;
 
 export type LookupOutcome =
   | { ok: true; result: LookupResult }
@@ -36,7 +38,16 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
   }
 
   const base = await withGuaranteedExamples(term, result);
-  return { ok: true, result: await withTranslations(base) };
+  // The translation batch and the Datamuse phrase fetch are independent
+  // enrichment arms, so they run in parallel. Each owns its own failures
+  // (null Chinese text / empty phrase list); the extra catch keeps a
+  // rejecting phrase source from sinking an otherwise successful lookup,
+  // mirroring the Tatoeba supplementation principle.
+  const [translated, relatedPhrases] = await Promise.all([
+    withTranslations(base),
+    fetchRelatedPhrases(term, MAX_RELATED_PHRASES).catch((): string[] => []),
+  ]);
+  return { ok: true, result: { ...translated, relatedPhrases } };
 }
 
 /**

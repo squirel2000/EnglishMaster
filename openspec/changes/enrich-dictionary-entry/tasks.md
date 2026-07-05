@@ -16,8 +16,8 @@
 
 ## 4. 常用片語／相關片語
 
-- [ ] 4.1 新增 `src/lib/datamuse-api.ts`：`sp=<term> *`、`max=6`、8 秒逾時，回傳片語字串陣列，失敗回空陣列；`LookupResult` 新增 `relatedPhrases: string[]`，`lookup-service` 與翻譯批次平行呼叫；TDD：成功、逾時、空結果測試
-- [ ] 4.2 `DictionaryResult.tsx` 卡片尾端新增常用片語區塊（空清單省略）；`globals.css` 補樣式；TDD：顯示與省略測試
+- [x] 4.1 新增 `src/lib/datamuse-api.ts`：`sp=<term> *`、`max=6`、8 秒逾時，回傳片語字串陣列，失敗回空陣列；`LookupResult` 新增 `relatedPhrases: string[]`，`lookup-service` 與翻譯批次平行呼叫；TDD：成功、逾時、空結果測試
+- [x] 4.2 `DictionaryResult.tsx` 卡片尾端新增常用片語區塊（空清單省略）；`globals.css` 補樣式；TDD：顯示與省略測試
 
 ## 5. 驗證
 

@@ -64,21 +64,25 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
           </ul>
         </div>
       )}
-      <ThesaurusSection label="同義" words={result.synonyms} />
-      <ThesaurusSection label="反義" words={result.antonyms} />
+      <WordChipsSection label="同義" words={result.synonyms} />
+      <WordChipsSection label="反義" words={result.antonyms} />
+      <WordChipsSection label="片語" words={result.relatedPhrases} />
     </section>
   );
 }
 
-/** Synonym/antonym word chips; renders nothing when the list is empty. */
-function ThesaurusSection({ label, words }: { label: string; words: string[] }) {
+/**
+ * A labelled row of English word/phrase chips (synonyms, antonyms, related
+ * phrases); renders nothing when the list is empty.
+ */
+function WordChipsSection({ label, words }: { label: string; words: string[] }) {
   if (words.length === 0) return null;
   return (
     <div className="entry-section">
       <h3 className="eyebrow">{label}</h3>
-      <ul className="thesaurus-list" role="list">
+      <ul className="word-chips" role="list">
         {words.map((word) => (
-          <li key={word} className="thesaurus-item" lang="en">
+          <li key={word} className="word-chip" lang="en">
             {word}
           </li>
         ))}

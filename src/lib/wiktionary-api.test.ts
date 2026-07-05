@@ -35,6 +35,8 @@ describe('lookupWiktionary', () => {
     // Wiktionary provides no thesaurus data; the lists are always empty.
     expect(result!.synonyms).toEqual([]);
     expect(result!.antonyms).toEqual([]);
+    // Related phrases come from Datamuse in lookup-service, never the source.
+    expect(result!.relatedPhrases).toEqual([]);
   });
 
   it('converts spaces to underscores in the page URL', async () => {

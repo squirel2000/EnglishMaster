@@ -28,6 +28,12 @@ export interface LookupResult {
   synonyms: string[];
   /** English antonyms aggregated from the source, deduped, at most 8 */
   antonyms: string[];
+  /**
+   * Common phrases starting with the term, most frequent first, at most 6.
+   * Source-independent: normalizers emit [] and lookup-service fills the
+   * list from Datamuse.
+   */
+  relatedPhrases: string[];
   source: 'free-dictionary' | 'wiktionary';
 }
 

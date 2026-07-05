@@ -18,6 +18,7 @@ const sample: LookupResult = {
   ],
   synonyms: ['hi', 'greetings'],
   antonyms: ['goodbye'],
+  relatedPhrases: ['hello there'],
   source: 'free-dictionary',
 };
 

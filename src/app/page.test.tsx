@@ -16,6 +16,7 @@ const lookupBody: LookupResult = {
   ],
   synonyms: [],
   antonyms: [],
+  relatedPhrases: [],
   source: 'free-dictionary',
 };
 
@@ -192,6 +193,7 @@ describe('Home page', () => {
       examples: [],
       synonyms: [],
       antonyms: [],
+      relatedPhrases: [],
       source: 'free-dictionary',
     };
     const secondBody: LookupResult = {
@@ -203,6 +205,7 @@ describe('Home page', () => {
       examples: [],
       synonyms: [],
       antonyms: [],
+      relatedPhrases: [],
       source: 'free-dictionary',
     };
 
@@ -257,6 +260,7 @@ describe('Home page', () => {
       examples: [],
       synonyms: [],
       antonyms: [],
+      relatedPhrases: [],
       source: 'free-dictionary',
     };
 

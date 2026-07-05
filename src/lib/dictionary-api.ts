@@ -75,6 +75,8 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
     examples,
     synonyms: [...synonyms].slice(0, MAX_THESAURUS_ITEMS),
     antonyms: [...antonyms].slice(0, MAX_THESAURUS_ITEMS),
+    // Related phrases are attached later by lookup-service (Datamuse).
+    relatedPhrases: [],
     source: 'free-dictionary',
   };
 }

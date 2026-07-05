@@ -61,6 +61,8 @@ export async function lookupWiktionary(
     // Wiktionary's definition endpoint carries no thesaurus data.
     synonyms: [],
     antonyms: [],
+    // Related phrases are attached later by lookup-service (Datamuse).
+    relatedPhrases: [],
     source: 'wiktionary',
   };
 }

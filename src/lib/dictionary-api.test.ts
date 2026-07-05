@@ -105,6 +105,12 @@ describe('lookupFreeDictionary', () => {
     expect(result!.antonyms).toEqual([]);
   });
 
+  it('always emits empty related phrases (they come from Datamuse in lookup-service)', async () => {
+    stubFetch(200, helloFixture);
+    const result = await lookupFreeDictionary('hello');
+    expect(result!.relatedPhrases).toEqual([]);
+  });
+
   it('returns null on 404 (word not found)', async () => {
     stubFetch(404, { title: 'No Definitions Found' });
     await expect(lookupFreeDictionary('zzzzzz')).resolves.toBeNull();
