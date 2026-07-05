@@ -15,14 +15,20 @@ export function PronunciationButton({ text, audioUrl }: PronunciationButtonProps
   const canSpeak = ttsAvailable();
   if (!audioUrl && !canSpeak) return null;
 
-  function play() {
-    if (audioUrl) {
-      void new Audio(audioUrl).play();
-      return;
-    }
+  function speakWithTts() {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     window.speechSynthesis.speak(utterance);
+  }
+
+  function play() {
+    if (audioUrl) {
+      new Audio(audioUrl).play().catch(() => {
+        if (ttsAvailable()) speakWithTts();
+      });
+      return;
+    }
+    speakWithTts();
   }
 
   return (

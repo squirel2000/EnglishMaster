@@ -27,6 +27,7 @@ function stubSpeechSynthesis() {
 describe('PronunciationButton', () => {
   it('plays the audio file when audioUrl is provided', async () => {
     const play = vi.fn().mockResolvedValue(undefined);
+    const speak = stubSpeechSynthesis();
     vi.spyOn(window, 'Audio').mockImplementation(
       function() { return { play } as unknown as HTMLAudioElement; },
     );
@@ -36,6 +37,26 @@ describe('PronunciationButton', () => {
     await userEvent.click(screen.getByRole('button', { name: /發音/ }));
     expect(window.Audio).toHaveBeenCalledWith('https://example.com/hello-us.mp3');
     expect(play).toHaveBeenCalled();
+    // Resolved play must NOT trigger TTS.
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it('falls back to TTS when Audio.play rejects (e.g. 404 audio URL)', async () => {
+    const play = vi.fn().mockRejectedValue(new Error('404'));
+    const speak = stubSpeechSynthesis();
+    vi.spyOn(window, 'Audio').mockImplementation(
+      function() { return { play } as unknown as HTMLAudioElement; },
+    );
+    render(
+      <PronunciationButton text="hello" audioUrl="https://example.com/missing.mp3" />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /發音/ }));
+    expect(play).toHaveBeenCalled();
+    // After play rejects, TTS must be invoked with an en-US utterance.
+    expect(speak).toHaveBeenCalledTimes(1);
+    const utterance = speak.mock.calls[0][0] as { text: string; lang: string };
+    expect(utterance.text).toBe('hello');
+    expect(utterance.lang).toBe('en-US');
   });
 
   it('falls back to en-US speech synthesis when there is no audio file', async () => {

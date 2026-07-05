@@ -120,4 +120,61 @@ describe('Home page', () => {
     await screen.findByText('查詢服務暫時無法使用，請稍後再試');
     expect(screen.getByRole('button', { name: /的美式發音/ })).toBeInTheDocument();
   });
+
+  it('ignores stale responses when a newer search supersedes the first', async () => {
+    // Deferred promises: first query resolves AFTER the second.
+    let resolveFirst!: (v: Response) => void;
+    let resolveSecond!: (v: Response) => void;
+    const firstPromise = new Promise<Response>((res) => { resolveFirst = res; });
+    const secondPromise = new Promise<Response>((res) => { resolveSecond = res; });
+
+    const firstBody: LookupResult = {
+      term: 'first',
+      pronunciation: { audioUrl: null, phonetic: '/fɜːst/' },
+      definitions: [{ partOfSpeech: 'noun', definition: 'First result.' }],
+      examples: [],
+      source: 'free-dictionary',
+    };
+    const secondBody: LookupResult = {
+      term: 'second',
+      pronunciation: { audioUrl: null, phonetic: '/ˈsɛkənd/' },
+      definitions: [{ partOfSpeech: 'noun', definition: 'Second result.' }],
+      examples: [],
+      source: 'free-dictionary',
+    };
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('first')) {
+        return firstPromise;
+      }
+      if (url.includes('second')) {
+        return secondPromise;
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    }));
+
+    render(<Home />);
+    const textbox = screen.getByRole('textbox');
+
+    // Fire first search for "first" (word).
+    await userEvent.type(textbox, 'first{enter}');
+    // Clear and fire second search for "second" (word) before first resolves.
+    await userEvent.clear(textbox);
+    await userEvent.type(textbox, 'second{enter}');
+
+    // Resolve the SECOND search first so the UI shows "second".
+    resolveSecond(new Response(JSON.stringify(secondBody), { status: 200 }));
+    expect(await screen.findByRole('heading', { name: 'second' })).toBeInTheDocument();
+
+    // Now resolve the FIRST (stale) search. The stale guard must discard it.
+    resolveFirst(new Response(JSON.stringify(firstBody), { status: 200 }));
+
+    // Give React a tick to process any state update that should NOT happen.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // The UI must still show "second", not "first".
+    expect(screen.getByRole('heading', { name: 'second' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'first' })).not.toBeInTheDocument();
+  });
 });

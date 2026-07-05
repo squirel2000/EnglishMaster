@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { SearchBox } from '@/components/SearchBox';
 import { DictionaryResult } from '@/components/DictionaryResult';
 import { TranslationResultView } from '@/components/TranslationResultView';
@@ -25,16 +25,20 @@ const MESSAGES = {
 
 export default function Home() {
   const [state, setState] = useState<ViewState>({ status: 'idle' });
+  const requestIdRef = useRef(0);
 
   async function runSearch(query: string, forcedMode?: Mode) {
     const mode: Mode =
       forcedMode ?? (classifyQuery(query) === 'sentence' ? 'sentence' : 'dictionary');
+    const requestId = ++requestIdRef.current;
     setState({ status: 'loading' });
     try {
       if (mode === 'dictionary') {
         const res = await fetch(`/api/lookup?q=${encodeURIComponent(query)}`);
+        if (requestId !== requestIdRef.current) return;
         if (res.ok) {
           const result = (await res.json()) as LookupResult;
+          if (requestId !== requestIdRef.current) return;
           setState({ status: 'dictionary', query, result });
         } else {
           const message =
@@ -43,8 +47,10 @@ export default function Home() {
         }
       } else {
         const res = await fetch(`/api/translate?q=${encodeURIComponent(query)}`);
+        if (requestId !== requestIdRef.current) return;
         if (res.ok) {
           const result = (await res.json()) as TranslationResult;
+          if (requestId !== requestIdRef.current) return;
           setState({ status: 'sentence', query, result });
         } else {
           const message =
@@ -53,6 +59,7 @@ export default function Home() {
         }
       }
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setState({ status: 'error', query, mode, message: MESSAGES.serviceUnavailable });
     }
   }
