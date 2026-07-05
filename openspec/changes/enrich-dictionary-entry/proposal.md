@@ -22,7 +22,7 @@
 
 ## Impact
 
-- 受影響檔案：`src/lib/types.ts`、`src/lib/dictionary-api.ts`、`src/lib/wiktionary-api.ts`、`src/lib/lookup-service.ts`、`src/lib/translation-api.ts`（抽出可重用的逐句翻譯）、新增 `src/lib/datamuse-api.ts`、`src/components/DictionaryResult.tsx`、`src/app/globals.css`（新區塊樣式），及上述各檔對應測試
+- 受影響檔案：`src/lib/types.ts`、`src/lib/dictionary-api.ts`、`src/lib/wiktionary-api.ts`、`src/lib/lookup-service.ts`、`src/lib/translation-api.ts`（抽出可重用的逐句翻譯）、新增 `src/lib/datamuse-api.ts`、`src/components/DictionaryResult.tsx`、`src/app/globals.css`（新區塊樣式），及上述各檔對應測試；`src/app/page.test.tsx` 與 `src/app/api/lookup/route.test.ts` 的 fixtures 隨 `LookupResult` 形狀同步更新
 - 新增執行期外部相依：Datamuse API（免費、無需 API key）
 - 翻譯額度：釋義與例句翻譯共用 MyMemory 匿名額度（約 5,000 字元/日，與整句翻譯同一額度池）。以「只翻譯會顯示的內容（至多 5 釋義＋3 例句）＋伺服器端記憶體快取＋額度耗盡時優雅退回英文」控制消耗；此為免費無金鑰限制下的已知取捨
 - 不影響整句翻譯、發音播放、查詢入口等既有功能
