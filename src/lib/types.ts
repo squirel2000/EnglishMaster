@@ -8,6 +8,8 @@ export interface Pronunciation {
 export interface DefinitionEntry {
   partOfSpeech: string;
   definition: string;
+  /** Traditional Chinese translation of the definition; null when unavailable */
+  definitionZh: string | null;
 }
 
 export interface LookupResult {

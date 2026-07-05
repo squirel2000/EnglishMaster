@@ -24,6 +24,7 @@ describe('lookupWiktionary', () => {
     expect(result!.definitions[0]).toEqual({
       partOfSpeech: 'verb',
       definition: 'To die.',
+      definitionZh: null,
     });
     expect(result!.examples).toEqual([
       'The old horse finally kicked the bucket.',

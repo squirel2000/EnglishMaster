@@ -3,17 +3,26 @@ import { lookupTerm } from './lookup-service';
 import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
-import type { LookupResult } from './types';
+import { translateSegment } from './translation-api';
+import type { DefinitionEntry, LookupResult } from './types';
 
 vi.mock('./dictionary-api');
 vi.mock('./wiktionary-api');
 vi.mock('./tatoeba-api');
+vi.mock('./translation-api');
 
-function makeResult(examples: string[]): LookupResult {
+const surrenderOnly: DefinitionEntry[] = [
+  { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: null },
+];
+
+function makeResult(
+  examples: string[],
+  definitions: DefinitionEntry[] = surrenderOnly,
+): LookupResult {
   return {
     term: 'give up',
     pronunciation: { audioUrl: null, phonetic: null },
-    definitions: [{ partOfSpeech: 'verb', definition: 'To surrender.' }],
+    definitions,
     examples,
     source: 'free-dictionary',
   };
@@ -21,6 +30,12 @@ function makeResult(examples: string[]): LookupResult {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Enrichment is best-effort; by default let translation be unavailable so
+  // the pre-existing lookup behaviors are exercised without Chinese text.
+  vi.mocked(translateSegment).mockResolvedValue({
+    ok: false,
+    error: 'service-unavailable',
+  });
 });
 
 describe('lookupTerm', () => {
@@ -93,5 +108,108 @@ describe('lookupTerm', () => {
       ok: false,
       error: 'service-unavailable',
     });
+  });
+});
+
+describe('lookupTerm definition enrichment', () => {
+  it('attaches a Traditional Chinese translation to each definition', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'b']));
+    vi.mocked(translateSegment).mockResolvedValue({
+      ok: true,
+      result: { original: 'To surrender.', translated: '放棄。' },
+    });
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions).toEqual([
+        { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: '放棄。' },
+      ]);
+    }
+    expect(translateSegment).toHaveBeenCalledWith('To surrender.');
+  });
+
+  it('truncates definitions to the first five and translates only those', async () => {
+    const definitions: DefinitionEntry[] = Array.from({ length: 7 }, (_, i) => ({
+      partOfSpeech: 'noun',
+      definition: `Sense ${i + 1}.`,
+      definitionZh: null,
+    }));
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(['a', 'b'], definitions),
+    );
+    vi.mocked(translateSegment).mockImplementation(async (text) => ({
+      ok: true,
+      result: { original: text, translated: `中文：${text}` },
+    }));
+    const outcome = await lookupTerm('sense');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions).toHaveLength(5);
+      expect(outcome.result.definitions[0]).toEqual({
+        partOfSpeech: 'noun',
+        definition: 'Sense 1.',
+        definitionZh: '中文：Sense 1.',
+      });
+      expect(outcome.result.definitions[4].definitionZh).toBe('中文：Sense 5.');
+    }
+    expect(translateSegment).toHaveBeenCalledTimes(5);
+  });
+
+  it('nulls definitionZh for a failed segment while keeping the others', async () => {
+    const definitions: DefinitionEntry[] = [
+      { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: null },
+      { partOfSpeech: 'verb', definition: 'To stop or quit.', definitionZh: null },
+    ];
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(['a', 'b'], definitions),
+    );
+    vi.mocked(translateSegment).mockImplementation(async (text) => {
+      if (text === 'To surrender.') {
+        return { ok: true, result: { original: text, translated: '放棄。' } };
+      }
+      throw new Error('translator crashed');
+    });
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions).toEqual([
+        { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: '放棄。' },
+        { partOfSpeech: 'verb', definition: 'To stop or quit.', definitionZh: null },
+      ]);
+    }
+  });
+
+  it('degrades to English-only definitions when quota is exhausted, lookup still succeeds', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'b']));
+    vi.mocked(translateSegment).mockResolvedValue({
+      ok: false,
+      error: 'quota-exhausted',
+    });
+    await expect(lookupTerm('give up')).resolves.toEqual({
+      ok: true,
+      result: expect.objectContaining({
+        definitions: [
+          { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: null },
+        ],
+      }),
+    });
+  });
+
+  it('translates definitions on the Wiktionary fallback path too', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(null);
+    vi.mocked(lookupWiktionary).mockResolvedValue({
+      ...makeResult(['x', 'y']),
+      source: 'wiktionary',
+    });
+    vi.mocked(translateSegment).mockResolvedValue({
+      ok: true,
+      result: { original: 'To surrender.', translated: '放棄。' },
+    });
+    const outcome = await lookupTerm('kick the bucket');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.source).toBe('wiktionary');
+      expect(outcome.result.definitions[0].definitionZh).toBe('放棄。');
+    }
   });
 });

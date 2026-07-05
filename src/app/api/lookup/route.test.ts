@@ -9,7 +9,9 @@ vi.mock('@/lib/lookup-service');
 const sample: LookupResult = {
   term: 'hello',
   pronunciation: { audioUrl: null, phonetic: '/həˈloʊ/' },
-  definitions: [{ partOfSpeech: 'noun', definition: 'A greeting.' }],
+  definitions: [
+    { partOfSpeech: 'noun', definition: 'A greeting.', definitionZh: '問候語。' },
+  ],
   examples: ['Hello, everyone.', 'Hello? Is anyone there?'],
   source: 'free-dictionary',
 };

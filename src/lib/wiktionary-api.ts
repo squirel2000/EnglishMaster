@@ -40,6 +40,8 @@ export async function lookupWiktionary(
         definitions.push({
           partOfSpeech: usage.partOfSpeech.toLowerCase(),
           definition: text,
+          // Chinese translation is attached later by lookup-service.
+          definitionZh: null,
         });
       }
       for (const example of def.examples ?? []) {

@@ -44,6 +44,8 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
         definitions.push({
           partOfSpeech: meaning.partOfSpeech,
           definition: def.definition,
+          // Chinese translation is attached later by lookup-service.
+          definitionZh: null,
         });
         if (def.example) examples.push(def.example);
       }

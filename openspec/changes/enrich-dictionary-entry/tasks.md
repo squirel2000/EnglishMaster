@@ -1,8 +1,8 @@
 ## 1. 繁體中文釋義（2-5 筆常用釋義）
 
-- [ ] 1.1 從 `translation-api.ts` 抽出可重用的單段翻譯函式（含 quotaFinished 偵測），加上模組層級記憶體快取（容量上限，先進先出淘汰）；TDD：先寫翻譯成功／失敗／額度耗盡／快取命中測試
-- [ ] 1.2 變更型別：`DefinitionEntry` 新增 `definitionZh: string | null`；`lookup-service` 於基礎結果確定後將釋義截為前 5 筆並平行翻譯（`allSettled`，失敗該筆為 null）；同步修正受影響的 fixtures 與測試
-- [ ] 1.3 `DictionaryResult.tsx` 釋義改雙語呈現（中文為主、英文對照；`definitionZh` 為 null 時僅英文）；`globals.css` 補對應樣式；TDD：雙語顯示與降級顯示測試
+- [x] 1.1 從 `translation-api.ts` 抽出可重用的單段翻譯函式（含 quotaFinished 偵測），加上模組層級記憶體快取（容量上限，先進先出淘汰）；TDD：先寫翻譯成功／失敗／額度耗盡／快取命中測試
+- [x] 1.2 變更型別：`DefinitionEntry` 新增 `definitionZh: string | null`；`lookup-service` 於基礎結果確定後將釋義截為前 5 筆並平行翻譯（`allSettled`，失敗該筆為 null）；同步修正受影響的 fixtures 與測試
+- [x] 1.3 `DictionaryResult.tsx` 釋義改雙語呈現（中文為主、英文對照；`definitionZh` 為 null 時僅英文）；`globals.css` 補對應樣式；TDD：雙語顯示與降級顯示測試
 
 ## 2. 雙語例句（英＋中）
 

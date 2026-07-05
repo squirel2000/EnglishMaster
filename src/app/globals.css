@@ -482,6 +482,22 @@ button {
   color: var(--paper);
 }
 
+/* Bilingual definition: Chinese leads at full ink, English follows dimmer. */
+.definition-bilingual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.definition-zh {
+  color: var(--paper);
+}
+
+.definition-en {
+  color: var(--paper-dim);
+  font-size: 0.9375rem;
+}
+
 .examples {
   list-style: none;
   display: flex;

@@ -1,11 +1,13 @@
 import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
-import type { LookupErrorCode, LookupResult } from './types';
+import { translateSegment } from './translation-api';
+import type { DefinitionEntry, LookupErrorCode, LookupResult } from './types';
 import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
 const MIN_EXAMPLES = 2;
 const MAX_EXAMPLES = 3;
+const MAX_DEFINITIONS = 5;
 
 export type LookupOutcome =
   | { ok: true; result: LookupResult }
@@ -33,7 +35,34 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
     return { ok: false, error: sawServiceError ? 'service-unavailable' : 'not-found' };
   }
 
-  return { ok: true, result: await withGuaranteedExamples(term, result) };
+  const base = await withGuaranteedExamples(term, result);
+  return { ok: true, result: await withTranslatedDefinitions(base) };
+}
+
+/**
+ * Keep the first MAX_DEFINITIONS definitions (source order reflects common
+ * usage) and translate them to Traditional Chinese in parallel. Translation
+ * is best-effort: a failed or quota-exhausted segment leaves definitionZh
+ * null and must never fail the lookup itself.
+ */
+async function withTranslatedDefinitions(
+  result: LookupResult,
+): Promise<LookupResult> {
+  const definitions = result.definitions.slice(0, MAX_DEFINITIONS);
+  const outcomes = await Promise.allSettled(
+    definitions.map((entry) => translateSegment(entry.definition)),
+  );
+  const translated: DefinitionEntry[] = definitions.map((entry, index) => {
+    const outcome = outcomes[index];
+    return {
+      ...entry,
+      definitionZh:
+        outcome.status === 'fulfilled' && outcome.value.ok
+          ? outcome.value.result.translated
+          : null,
+    };
+  });
+  return { ...result, definitions: translated };
 }
 
 async function withGuaranteedExamples(

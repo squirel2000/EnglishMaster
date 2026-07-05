@@ -27,7 +27,14 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
           {result.definitions.map((entry, index) => (
             <li key={index} className="definition-item">
               <span className="pos-tag">{entry.partOfSpeech}</span>
-              <span className="definition-text">{entry.definition}</span>
+              {entry.definitionZh ? (
+                <span className="definition-text definition-bilingual">
+                  <span className="definition-zh">{entry.definitionZh}</span>
+                  <span className="definition-en">{entry.definition}</span>
+                </span>
+              ) : (
+                <span className="definition-text">{entry.definition}</span>
+              )}
             </li>
           ))}
         </ol>

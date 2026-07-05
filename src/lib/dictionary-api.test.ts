@@ -19,6 +19,7 @@ describe('lookupFreeDictionary', () => {
     expect(result!.definitions).toContainEqual({
       partOfSpeech: 'interjection',
       definition: 'A greeting said when meeting someone.',
+      definitionZh: null,
     });
     expect(result!.examples).toEqual([
       'Hello, everyone.',

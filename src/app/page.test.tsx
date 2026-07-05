@@ -7,7 +7,9 @@ import type { LookupResult } from '@/lib/types';
 const lookupBody: LookupResult = {
   term: 'hello',
   pronunciation: { audioUrl: null, phonetic: '/həˈloʊ/' },
-  definitions: [{ partOfSpeech: 'noun', definition: 'A greeting.' }],
+  definitions: [
+    { partOfSpeech: 'noun', definition: 'A greeting.', definitionZh: '問候語。' },
+  ],
   examples: ['Hello, everyone.', 'Hello? Is anyone there?'],
   source: 'free-dictionary',
 };
@@ -179,14 +181,18 @@ describe('Home page', () => {
     const firstBody: LookupResult = {
       term: 'first',
       pronunciation: { audioUrl: null, phonetic: '/fɜːst/' },
-      definitions: [{ partOfSpeech: 'noun', definition: 'First result.' }],
+      definitions: [
+        { partOfSpeech: 'noun', definition: 'First result.', definitionZh: null },
+      ],
       examples: [],
       source: 'free-dictionary',
     };
     const secondBody: LookupResult = {
       term: 'second',
       pronunciation: { audioUrl: null, phonetic: '/ˈsɛkənd/' },
-      definitions: [{ partOfSpeech: 'noun', definition: 'Second result.' }],
+      definitions: [
+        { partOfSpeech: 'noun', definition: 'Second result.', definitionZh: null },
+      ],
       examples: [],
       source: 'free-dictionary',
     };
@@ -236,7 +242,9 @@ describe('Home page', () => {
     const bodyB: LookupResult = {
       term: 'banana',
       pronunciation: { audioUrl: null, phonetic: '/bəˈnɑːnə/' },
-      definitions: [{ partOfSpeech: 'noun', definition: 'A yellow fruit.' }],
+      definitions: [
+        { partOfSpeech: 'noun', definition: 'A yellow fruit.', definitionZh: null },
+      ],
       examples: [],
       source: 'free-dictionary',
     };
