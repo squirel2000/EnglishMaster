@@ -4,7 +4,7 @@ import "./globals.css";
 
 const displayFont = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["700"],
   style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
@@ -12,14 +12,14 @@ const displayFont = Source_Serif_4({
 
 const bodyFont = IBM_Plex_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "600"],
   variable: "--font-body",
   display: "swap",
 });
 
 const monoFont = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400"],
   variable: "--font-mono",
   display: "swap",
 });

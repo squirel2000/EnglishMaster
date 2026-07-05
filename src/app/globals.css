@@ -533,6 +533,9 @@ button {
    --------------------------------------------------------------------- */
 .pron-btn {
   flex-shrink: 0;
+  /* Stay compact when rendered directly in a column flex container
+     (sentence-mode error state), not just inside card heads. */
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
