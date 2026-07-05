@@ -14,6 +14,8 @@ const lookupBody: LookupResult = {
     { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
     { en: 'Hello? Is anyone there?', zh: null },
   ],
+  synonyms: [],
+  antonyms: [],
   source: 'free-dictionary',
 };
 
@@ -188,6 +190,8 @@ describe('Home page', () => {
         { partOfSpeech: 'noun', definition: 'First result.', definitionZh: null },
       ],
       examples: [],
+      synonyms: [],
+      antonyms: [],
       source: 'free-dictionary',
     };
     const secondBody: LookupResult = {
@@ -197,6 +201,8 @@ describe('Home page', () => {
         { partOfSpeech: 'noun', definition: 'Second result.', definitionZh: null },
       ],
       examples: [],
+      synonyms: [],
+      antonyms: [],
       source: 'free-dictionary',
     };
 
@@ -249,6 +255,8 @@ describe('Home page', () => {
         { partOfSpeech: 'noun', definition: 'A yellow fruit.', definitionZh: null },
       ],
       examples: [],
+      synonyms: [],
+      antonyms: [],
       source: 'free-dictionary',
     };
 

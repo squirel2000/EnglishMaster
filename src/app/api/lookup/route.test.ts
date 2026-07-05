@@ -16,6 +16,8 @@ const sample: LookupResult = {
     { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
     { en: 'Hello? Is anyone there?', zh: null },
   ],
+  synonyms: ['hi', 'greetings'],
+  antonyms: ['goodbye'],
   source: 'free-dictionary',
 };
 

@@ -537,6 +537,25 @@ button {
   font-size: 0.9375rem;
 }
 
+/* Synonym / antonym chips: quiet English word tokens, visually one step
+   below the brass pos-tag so they read as references, not senses. */
+.thesaurus-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.thesaurus-item {
+  font-family: var(--font-mono), ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.8125rem;
+  color: var(--paper-dim);
+  background: var(--ink-700);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  padding: 0.15rem 0.55rem;
+}
+
 .sentence-head {
   display: flex;
   align-items: flex-start;

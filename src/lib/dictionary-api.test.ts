@@ -47,6 +47,64 @@ describe('lookupFreeDictionary', () => {
     );
   });
 
+  it('aggregates meaning- and definition-level synonyms/antonyms, deduped and capped at 8', async () => {
+    // Inline fixture: the trimmed hello fixture predates these fields, so
+    // build an entry that exercises both levels, duplicates, and the cap.
+    stubFetch(200, [
+      {
+        word: 'happy',
+        phonetics: [],
+        meanings: [
+          {
+            partOfSpeech: 'adjective',
+            synonyms: ['content', 'cheerful', 'content'],
+            antonyms: ['sad'],
+            definitions: [
+              {
+                definition: 'Feeling joy.',
+                synonyms: ['joyful', 'cheerful', 'merry'],
+                antonyms: ['unhappy', 'sad'],
+              },
+              // No synonyms/antonyms keys at all on this definition.
+              { definition: 'Fortunate.', synonyms: ['lucky', 'fortunate'] },
+            ],
+          },
+          {
+            // No synonyms/antonyms keys at the meaning level.
+            partOfSpeech: 'verb',
+            definitions: [
+              {
+                definition: 'To make happy.',
+                synonyms: ['gladden', 'delight', 'please', 'satisfy'],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    const result = await lookupFreeDictionary('happy');
+    // Document order (entries -> meanings -> definitions), first occurrence
+    // wins; 10 unique synonyms collected, capped to the first 8.
+    expect(result!.synonyms).toEqual([
+      'content',
+      'cheerful',
+      'joyful',
+      'merry',
+      'lucky',
+      'fortunate',
+      'gladden',
+      'delight',
+    ]);
+    expect(result!.antonyms).toEqual(['sad', 'unhappy']);
+  });
+
+  it('returns empty synonym/antonym lists when the source omits the fields', async () => {
+    stubFetch(200, helloFixture);
+    const result = await lookupFreeDictionary('hello');
+    expect(result!.synonyms).toEqual([]);
+    expect(result!.antonyms).toEqual([]);
+  });
+
   it('returns null on 404 (word not found)', async () => {
     stubFetch(404, { title: 'No Definitions Found' });
     await expect(lookupFreeDictionary('zzzzzz')).resolves.toBeNull();

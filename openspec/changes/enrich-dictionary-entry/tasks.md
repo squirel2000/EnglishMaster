@@ -11,8 +11,8 @@
 
 ## 3. 同義字詞／反義字詞
 
-- [ ] 3.1 擴充 `dictionary-api.ts` normalizer：擷取 meaning 層與 definition 層的 synonyms/antonyms，去重、各截 8 筆；`LookupResult` 新增 `synonyms: string[]`、`antonyms: string[]`（Wiktionary 路徑回傳空陣列）；TDD：以含 synonyms 的 fixture 驗證彙整與去重
-- [ ] 3.2 `DictionaryResult.tsx` 卡片尾端新增同義／反義區塊（空清單省略整塊）；`globals.css` 補樣式；TDD：有資料顯示、空清單省略測試
+- [x] 3.1 擴充 `dictionary-api.ts` normalizer：擷取 meaning 層與 definition 層的 synonyms/antonyms，去重、各截 8 筆；`LookupResult` 新增 `synonyms: string[]`、`antonyms: string[]`（Wiktionary 路徑回傳空陣列）；TDD：以含 synonyms 的 fixture 驗證彙整與去重
+- [x] 3.2 `DictionaryResult.tsx` 卡片尾端新增同義／反義區塊（空清單省略整塊）；`globals.css` 補樣式；TDD：有資料顯示、空清單省略測試
 
 ## 4. 常用片語／相關片語
 

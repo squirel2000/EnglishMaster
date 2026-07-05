@@ -24,6 +24,10 @@ export interface LookupResult {
   pronunciation: Pronunciation;
   definitions: DefinitionEntry[];
   examples: ExampleEntry[];
+  /** English synonyms aggregated from the source, deduped, at most 8 */
+  synonyms: string[];
+  /** English antonyms aggregated from the source, deduped, at most 8 */
+  antonyms: string[];
   source: 'free-dictionary' | 'wiktionary';
 }
 

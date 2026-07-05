@@ -58,6 +58,9 @@ export async function lookupWiktionary(
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
     examples,
+    // Wiktionary's definition endpoint carries no thesaurus data.
+    synonyms: [],
+    antonyms: [],
     source: 'wiktionary',
   };
 }

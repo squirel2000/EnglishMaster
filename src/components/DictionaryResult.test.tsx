@@ -14,6 +14,8 @@ const sample: LookupResult = {
     { en: 'They gave up the search.', zh: '他們放棄了搜尋。' },
     { en: 'Never give up hope.', zh: null },
   ],
+  synonyms: ['surrender', 'quit', 'abandon'],
+  antonyms: ['persist', 'continue'],
   source: 'free-dictionary',
 };
 
@@ -91,6 +93,46 @@ describe('DictionaryResult', () => {
     const item = screen.getByText('Never give up hope.').closest('li');
     expect(item).not.toBeNull();
     expect(item!.querySelector('.example-zh')).toBeNull();
+  });
+
+  it('renders synonym and antonym sections after the examples', () => {
+    render(<DictionaryResult result={sample} />);
+    expect(screen.getByText('同義')).toBeInTheDocument();
+    expect(screen.getByText('反義')).toBeInTheDocument();
+    for (const word of ['surrender', 'quit', 'abandon', 'persist', 'continue']) {
+      expect(screen.getByText(word)).toBeInTheDocument();
+    }
+    // Card order: examples first, then synonyms, then antonyms.
+    const examplesHeading = screen.getByText('例句');
+    const synonymsHeading = screen.getByText('同義');
+    const antonymsHeading = screen.getByText('反義');
+    expect(
+      examplesHeading.compareDocumentPosition(synonymsHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      synonymsHeading.compareDocumentPosition(antonymsHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('tags synonym and antonym words as English', () => {
+    render(<DictionaryResult result={sample} />);
+    expect(screen.getByText('surrender')).toHaveAttribute('lang', 'en');
+    expect(screen.getByText('persist')).toHaveAttribute('lang', 'en');
+  });
+
+  it('omits the synonyms section when the list is empty', () => {
+    render(<DictionaryResult result={{ ...sample, synonyms: [] }} />);
+    expect(screen.queryByText('同義')).not.toBeInTheDocument();
+    // The antonyms section is guarded independently and stays visible.
+    expect(screen.getByText('反義')).toBeInTheDocument();
+  });
+
+  it('omits the antonyms section when the list is empty', () => {
+    render(<DictionaryResult result={{ ...sample, antonyms: [] }} />);
+    expect(screen.queryByText('反義')).not.toBeInTheDocument();
+    expect(screen.getByText('同義')).toBeInTheDocument();
   });
 
   it('tags English and Chinese lines with lang attributes', () => {

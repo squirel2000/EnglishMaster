@@ -32,6 +32,9 @@ describe('lookupWiktionary', () => {
       { en: 'I think my sewing machine has kicked the bucket.', zh: null },
     ]);
     expect(JSON.stringify(result)).not.toContain('<');
+    // Wiktionary provides no thesaurus data; the lists are always empty.
+    expect(result!.synonyms).toEqual([]);
+    expect(result!.antonyms).toEqual([]);
   });
 
   it('converts spaces to underscores in the page URL', async () => {

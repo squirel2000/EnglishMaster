@@ -29,6 +29,8 @@ function makeResult(
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
     examples: toExamples(examples),
+    synonyms: [],
+    antonyms: [],
     source: 'free-dictionary',
   };
 }

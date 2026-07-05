@@ -10,11 +10,15 @@ interface ApiPhonetic {
 interface ApiDefinition {
   definition: string;
   example?: string;
+  synonyms?: string[];
+  antonyms?: string[];
 }
 
 interface ApiMeaning {
   partOfSpeech: string;
   definitions: ApiDefinition[];
+  synonyms?: string[];
+  antonyms?: string[];
 }
 
 interface ApiEntry {
@@ -35,12 +39,21 @@ export async function lookupFreeDictionary(
   return normalize(term, entries);
 }
 
+const MAX_THESAURUS_ITEMS = 8;
+
 function normalize(term: string, entries: ApiEntry[]): LookupResult {
   const definitions: DefinitionEntry[] = [];
   const examples: ExampleEntry[] = [];
+  // Sets keep insertion order, so first occurrence in document order wins.
+  const synonyms = new Set<string>();
+  const antonyms = new Set<string>();
   for (const entry of entries) {
     for (const meaning of entry.meanings) {
+      addWords(synonyms, meaning.synonyms);
+      addWords(antonyms, meaning.antonyms);
       for (const def of meaning.definitions) {
+        addWords(synonyms, def.synonyms);
+        addWords(antonyms, def.antonyms);
         definitions.push({
           partOfSpeech: meaning.partOfSpeech,
           definition: def.definition,
@@ -60,8 +73,15 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
     },
     definitions,
     examples,
+    synonyms: [...synonyms].slice(0, MAX_THESAURUS_ITEMS),
+    antonyms: [...antonyms].slice(0, MAX_THESAURUS_ITEMS),
     source: 'free-dictionary',
   };
+}
+
+/** Collects words into the set; a missing source field contributes nothing. */
+function addWords(target: Set<string>, words?: string[]) {
+  for (const word of words ?? []) target.add(word);
 }
 
 function pickUsAudio(entries: ApiEntry[]): string | null {
