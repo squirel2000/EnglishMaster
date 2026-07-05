@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DictionaryResult } from './DictionaryResult';
 import type { LookupResult } from '@/lib/types';
 
@@ -35,6 +36,10 @@ const sample: LookupResult = {
   ],
   source: 'free-dictionary',
 };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('DictionaryResult', () => {
   it('renders term, phonetic, definitions with part of speech, sense examples, and supplements', () => {
@@ -257,6 +262,42 @@ describe('DictionaryResult', () => {
     // Bilingual neighbors are unaffected by this chip's degradation.
     expect(screen.getByText('讓步')).toBeInTheDocument();
     expect(screen.getByText('贈送')).toBeInTheDocument();
+  });
+
+  it('renders a disabled 加入 Anki button in the head cluster, after the pronunciation button', () => {
+    render(<DictionaryResult result={sample} />);
+    const anki = screen.getByRole('button', { name: '加入 Anki' });
+    expect(anki).toBeDisabled();
+    expect(anki.closest('.entry-audio')).not.toBeNull();
+    // Head order per spec: pronunciation button first, Anki button after.
+    const pron = screen.getByRole('button', { name: /播放 give up 的美式發音/ });
+    expect(
+      pron.compareDocumentPosition(anki) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('explains that the Anki link is not yet enabled', () => {
+    render(<DictionaryResult result={sample} />);
+    const anki = screen.getByRole('button', { name: '加入 Anki' });
+    expect(anki).toHaveAttribute('title', 'Anki 連結尚未啟用');
+    expect(anki).toHaveAccessibleDescription('Anki 連結尚未啟用');
+  });
+
+  it('keeps the Anki button when pronunciation data is absent', () => {
+    render(
+      <DictionaryResult
+        result={{ ...sample, pronunciation: { audioUrl: null, phonetic: null } }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '加入 Anki' })).toBeDisabled();
+  });
+
+  it('sends no network request when rendering or clicking the disabled Anki button', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    render(<DictionaryResult result={sample} />);
+    await userEvent.click(screen.getByRole('button', { name: '加入 Anki' }));
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('tags English and Chinese lines with lang attributes', () => {

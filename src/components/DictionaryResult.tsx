@@ -1,4 +1,6 @@
+import { useId } from 'react';
 import type { LookupResult, PhraseEntry } from '@/lib/types';
+import { isAnkiLinked } from '@/lib/anki';
 import { PronunciationButton } from './PronunciationButton';
 
 interface DictionaryResultProps {
@@ -18,6 +20,7 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
             text={result.term}
             audioUrl={result.pronunciation.audioUrl}
           />
+          <AddToAnkiButton />
         </div>
       </div>
       <hr className="entry-divider" />
@@ -84,6 +87,44 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
       <WordChipsSection label="反義" words={result.antonyms} />
       <PhraseChipsSection label="片語" phrases={result.relatedPhrases} />
     </section>
+  );
+}
+
+/**
+ * The Anki export entry point. The card payload builder is ready in
+ * src/lib/anki.ts, but the AnkiConnect link is not enabled yet
+ * (isAnkiLinked is a constant false), so the button renders disabled with
+ * an explanation and — being unclickable — never issues a network request.
+ * The future enable-link change flips the flag and wires onClick to
+ * buildAnkiNote plus the transport.
+ */
+function AddToAnkiButton() {
+  const hintId = useId();
+  return (
+    <>
+      <button
+        type="button"
+        className="anki-btn"
+        disabled={!isAnkiLinked()}
+        title="Anki 連結尚未啟用"
+        aria-describedby={hintId}
+      >
+        <svg
+          className="anki-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M12 5v14M5 12h14" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+        加入 Anki
+      </button>
+      <span id={hintId} className="visually-hidden">
+        Anki 連結尚未啟用
+      </span>
+    </>
   );
 }
 

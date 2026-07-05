@@ -11,8 +11,8 @@
 
 ## 3. Anki 匯出預備
 
-- [ ] 3.1 新增 `src/lib/anki.ts`：`buildAnkiNote(result)` 純函式（AnkiConnect v6 `addNote` 相容 payload；正面字詞＋音標、背面各區塊 HTML，缺料省略）與 `isAnkiLinked()`（恆 false 旗標）；TDD：完整組裝、部分資料組裝、不發網路請求
-- [ ] 3.2 `DictionaryResult.tsx` head 區新增「加入 Anki」按鈕：未連結時 disabled＋說明文字；TDD：按鈕呈現、disabled 狀態、無網路請求
+- [x] 3.1 新增 `src/lib/anki.ts`：`buildAnkiNote(result)` 純函式（AnkiConnect v6 `addNote` 相容 payload；正面字詞＋音標、背面各區塊 HTML，缺料省略）與 `isAnkiLinked()`（恆 false 旗標）；TDD：完整組裝、部分資料組裝、不發網路請求
+- [x] 3.2 `DictionaryResult.tsx` head 區新增「加入 Anki」按鈕：未連結時 disabled＋說明文字；TDD：按鈕呈現、disabled 狀態、無網路請求
 
 ## 4. 驗證
 
