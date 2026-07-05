@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { translateSentence } from '@/lib/translation-api';
+import { getTrimmedQuery } from '../query-param';
 
 export async function GET(request: Request): Promise<NextResponse> {
-  const q = new URL(request.url).searchParams.get('q')?.trim() ?? '';
+  const q = getTrimmedQuery(request);
   if (q === '') {
     return NextResponse.json({ error: 'empty-query' }, { status: 400 });
   }

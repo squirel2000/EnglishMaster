@@ -1,14 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { lookupWiktionary, stripHtml } from './wiktionary-api';
+import { stubFetch } from './test-helpers';
 import bucketFixture from './__fixtures__/wiktionary-kick-the-bucket.json';
-
-function stubFetch(status: number, body: unknown) {
-  const mock = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify(body), { status }),
-  );
-  vi.stubGlobal('fetch', mock);
-  return mock;
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();

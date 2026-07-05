@@ -2,8 +2,8 @@ import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
 import type { LookupErrorCode, LookupResult } from './types';
+import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
-const TIMEOUT_MS = 8000;
 const MIN_EXAMPLES = 2;
 const MAX_EXAMPLES = 3;
 

@@ -1,7 +1,7 @@
 import type { TranslateErrorCode, TranslationResult } from './types';
+import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
 const BASE_URL = 'https://api.mymemory.translated.net/get';
-const TIMEOUT_MS = 8000;
 
 export type TranslateOutcome =
   | { ok: true; result: TranslationResult }

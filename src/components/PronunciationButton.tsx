@@ -24,7 +24,7 @@ export function PronunciationButton({ text, audioUrl }: PronunciationButtonProps
   function play() {
     if (audioUrl) {
       new Audio(audioUrl).play().catch(() => {
-        if (ttsAvailable()) speakWithTts();
+        if (canSpeak) speakWithTts();
       });
       return;
     }

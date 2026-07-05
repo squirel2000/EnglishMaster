@@ -1,9 +1,7 @@
 const BASE_URL = 'https://api.tatoeba.org/unstable/sentences';
 
 interface TatoebaSentence {
-  id: number;
   text: string;
-  lang: string;
 }
 
 interface TatoebaResponse {

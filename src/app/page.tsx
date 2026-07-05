@@ -31,38 +31,35 @@ export default function Home() {
     const mode: Mode =
       forcedMode ?? (classifyQuery(query) === 'sentence' ? 'sentence' : 'dictionary');
     const requestId = ++requestIdRef.current;
+    // Drop any response that finishes after a newer search has started.
+    const setIfCurrent = (next: ViewState) => {
+      if (requestId === requestIdRef.current) setState(next);
+    };
     setState({ status: 'loading' });
     try {
       if (mode === 'dictionary') {
         const res = await fetch(`/api/lookup?q=${encodeURIComponent(query)}`);
-        if (requestId !== requestIdRef.current) return;
         if (res.ok) {
           const result = (await res.json()) as LookupResult;
-          if (requestId !== requestIdRef.current) return;
-          setState({ status: 'dictionary', query, result });
+          setIfCurrent({ status: 'dictionary', query, result });
         } else {
           const message =
             res.status === 404 ? MESSAGES.notFound : MESSAGES.serviceUnavailable;
-          if (requestId !== requestIdRef.current) return;
-          setState({ status: 'error', query, mode, message });
+          setIfCurrent({ status: 'error', query, mode, message });
         }
       } else {
         const res = await fetch(`/api/translate?q=${encodeURIComponent(query)}`);
-        if (requestId !== requestIdRef.current) return;
         if (res.ok) {
           const result = (await res.json()) as TranslationResult;
-          if (requestId !== requestIdRef.current) return;
-          setState({ status: 'sentence', query, result });
+          setIfCurrent({ status: 'sentence', query, result });
         } else {
           const message =
             res.status === 429 ? MESSAGES.quotaExhausted : MESSAGES.serviceUnavailable;
-          if (requestId !== requestIdRef.current) return;
-          setState({ status: 'error', query, mode, message });
+          setIfCurrent({ status: 'error', query, mode, message });
         }
       }
     } catch {
-      if (requestId !== requestIdRef.current) return;
-      setState({ status: 'error', query, mode, message: MESSAGES.serviceUnavailable });
+      setIfCurrent({ status: 'error', query, mode, message: MESSAGES.serviceUnavailable });
     }
   }
 

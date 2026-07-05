@@ -1,14 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { lookupFreeDictionary } from './dictionary-api';
+import { stubFetch } from './test-helpers';
 import helloFixture from './__fixtures__/free-dictionary-hello.json';
-
-function stubFetch(status: number, body: unknown) {
-  const mock = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify(body), { status }),
-  );
-  vi.stubGlobal('fetch', mock);
-  return mock;
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();

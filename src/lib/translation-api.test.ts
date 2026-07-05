@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { translateSentence } from './translation-api';
-
-function stubFetch(status: number, body: unknown) {
-  const mock = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify(body), { status }),
-  );
-  vi.stubGlobal('fetch', mock);
-  return mock;
-}
+import { stubFetch } from './test-helpers';
 
 function myMemoryBody(overrides: Record<string, unknown> = {}) {
   return {
