@@ -30,6 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Keep in sync with --ink-950 in globals.css.
   themeColor: "#0e1712",
 };
 

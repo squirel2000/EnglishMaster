@@ -19,12 +19,14 @@
   --paper-faint: #647063;
 
   --brass: #cc9c46;
+  --brass-rgb: 204, 156, 70;
   --brass-bright: #e3b968;
-  --brass-wash: rgba(204, 156, 70, 0.14);
-  --brass-wash-strong: rgba(204, 156, 70, 0.24);
+  --brass-wash: rgba(var(--brass-rgb), 0.14);
+  --brass-wash-strong: rgba(var(--brass-rgb), 0.24);
 
   --signal: #d17862;
-  --signal-wash: rgba(209, 120, 98, 0.12);
+  --signal-rgb: 209, 120, 98;
+  --signal-wash: rgba(var(--signal-rgb), 0.12);
 
   --shadow-card: 0 24px 48px -28px rgba(0, 0, 0, 0.65);
 
@@ -67,7 +69,7 @@ body {
   color: var(--paper);
   background: radial-gradient(
       ellipse 900px 520px at 50% -8%,
-      rgba(204, 156, 70, 0.07),
+      rgba(var(--brass-rgb), 0.07),
       transparent 60%
     ),
     var(--ink-950);
@@ -458,7 +460,7 @@ button {
 .definition-item::before {
   counter-increment: sense;
   content: counter(sense) ".";
-  font-family: var(--font-mono), ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono), ui-monospace, "Cascadia Mono", Consolas, monospace;
   color: var(--brass);
   font-size: 0.875rem;
   flex-shrink: 0;
@@ -466,7 +468,7 @@ button {
 }
 
 .pos-tag {
-  font-family: var(--font-mono), ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono), ui-monospace, "Cascadia Mono", Consolas, monospace;
   font-size: 0.75rem;
   color: var(--brass);
   background: var(--brass-wash);
