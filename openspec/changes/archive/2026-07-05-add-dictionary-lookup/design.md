@@ -79,7 +79,7 @@ Dictionary API 回傳的 phonetics 中優先挑選 US 音檔（URL 含 `-us` 或
 - [外部免費 API 無 SLA，可能停機或改版] → 代理層集中處理：每個外部呼叫設 8 秒逾時、備援鏈、統一繁中錯誤訊息；服務層測試以固定的 fixture 資料執行，不依賴外部服務
 - [MyMemory 匿名額度 5,000 字元/日，共用 IP 可能提早用罄] → 回應中的 `quotaFinished` 欄位觸發友善錯誤訊息；額度計算以伺服器出口 IP 為準，正式部署時需留意
 - [Wiktionary 回傳 HTML 需清洗] → 正規化層以測試覆蓋常見格式（連結、粗體、usage label）
-- [Web Speech API 各瀏覽器 en-US 語音品質不一，且需使用者互動後才能播放] → 播放一律由按鈕點擊觸發；偵測不到 en-US 語音時隱藏 TTS 按鈕
+- [Web Speech API 各瀏覽器 en-US 語音品質不一，且需使用者互動後才能播放] → 播放一律由按鈕點擊觸發；瀏覽器不支援 Web Speech API 且無音檔時隱藏發音按鈕（en-US 語音選用交由瀏覽器處理，`getVoices()` 非同步不做同步偵測）；音檔播放失敗時自動改用 TTS
 - [輸入類型啟發式會有誤判] → UI 提供一鍵切換查詢模式（見 D2）
 
 ## Migration Plan

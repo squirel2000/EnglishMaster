@@ -24,8 +24,12 @@
 - **WHEN** 查詢結果無任何美式音檔（含片語與整句情境）
 - **THEN** 發音按鈕改以 Web Speech API 的 en-US 語音朗讀查詢文字
 
+#### Scenario: 音檔播放失敗時改用 TTS
+- **WHEN** 音檔 URL 播放失敗（如連結失效），且瀏覽器支援 Web Speech API
+- **THEN** 系統改以 en-US 語音朗讀查詢文字，不得無聲無息
+
 ### Requirement: 不支援語音時的優雅降級
-系統 SHALL 在瀏覽器不支援 Web Speech API 或無 en-US 語音、且無音檔可播放時，隱藏發音按鈕；查詢結果的其餘內容 SHALL 正常顯示。
+系統 SHALL 在瀏覽器不支援 Web Speech API 且無音檔可播放時，隱藏發音按鈕；查詢結果的其餘內容 SHALL 正常顯示。（en-US 語音的選用交由瀏覽器語音機制處理，不做同步偵測 — `getVoices()` 為非同步且各瀏覽器行為不一）
 
 #### Scenario: 瀏覽器不支援 TTS 且無音檔
 - **WHEN** 瀏覽器無 Web Speech API 支援且查詢結果無音檔

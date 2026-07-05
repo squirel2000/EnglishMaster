@@ -1,0 +1,18 @@
+{
+  "en": [
+    {
+      "partOfSpeech": "Verb",
+      "language": "English",
+      "definitions": [
+        {
+          "definition": "<span class=\"usage-label-sense\"></span> To <a rel=\"mw:WikiLink\" href=\"/wiki/die\" title=\"die\">die</a>.",
+          "examples": ["The old horse finally <b>kicked the bucket</b>."]
+        },
+        {
+          "definition": "To break down such that it cannot be repaired.",
+          "examples": ["I think my sewing machine has <b>kicked the bucket</b>."]
+        }
+      ]
+    }
+  ]
+}
