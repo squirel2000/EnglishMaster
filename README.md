@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EnglishMaster
 
-## Getting Started
+網頁版英語學習平台。查詢英文單字、片語或整句，取得繁中釋義輔助：
 
-First, run the development server:
+- 單字/片語：釋義（含詞性）、音標、2-3 個例句
+- 整句：繁體中文翻譯
+- 美式（US）發音：真人音檔優先，無音檔時使用瀏覽器語音合成
+
+## 資料來源（皆為免費、無需 API key）
+
+| 用途 | 服務 |
+|---|---|
+| 單字/片語釋義 | Free Dictionary API（dictionaryapi.dev） |
+| 慣用語備援 | Wiktionary REST API |
+| 例句補充 | Tatoeba API |
+| 整句翻譯 | MyMemory API（匿名額度約 5,000 字元/日） |
+
+## 開發
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run test       # Vitest 單元測試
+npm run lint       # ESLint
+npm run build      # production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+開發約定見 `openspec/config.yaml`；功能規格見 `openspec/changes/add-dictionary-lookup/`。
