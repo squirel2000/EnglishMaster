@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe('lookupFreeDictionary', () => {
-  it('normalizes definitions, phonetic, examples, and picks the US audio', async () => {
+  it('normalizes definitions, phonetic, sense examples, and picks the US audio', async () => {
     stubFetch(200, helloFixture);
     const result = await lookupFreeDictionary('hello');
     expect(result).not.toBeNull();
@@ -16,16 +16,37 @@ describe('lookupFreeDictionary', () => {
     expect(result!.source).toBe('free-dictionary');
     expect(result!.pronunciation.audioUrl).toContain('-us.mp3');
     expect(result!.pronunciation.phonetic).toBe('/həˈləʊ/');
+    // Each source example attaches to its own sense (Chinese translations
+    // are attached later by lookup-service).
     expect(result!.definitions).toContainEqual({
       partOfSpeech: 'interjection',
       definition: 'A greeting said when meeting someone.',
       definitionZh: null,
+      example: { en: 'Hello, everyone.', zh: null },
     });
-    // Chinese translations are attached later by lookup-service.
-    expect(result!.examples).toEqual([
-      { en: 'Hello, everyone.', zh: null },
-      { en: 'Hello? How may I help you?', zh: null },
-    ]);
+    expect(result!.definitions).toContainEqual({
+      partOfSpeech: 'interjection',
+      definition: 'A greeting used when answering the telephone.',
+      definitionZh: null,
+      example: { en: 'Hello? How may I help you?', zh: null },
+    });
+  });
+
+  it('leaves example null for a sense the source gives no example for', async () => {
+    stubFetch(200, helloFixture);
+    const result = await lookupFreeDictionary('hello');
+    expect(result!.definitions).toContainEqual({
+      partOfSpeech: 'noun',
+      definition: '"Hello!" or an equivalent greeting.',
+      definitionZh: null,
+      example: null,
+    });
+  });
+
+  it('no longer flattens sense examples into the result-level list (it holds only lookup-service supplements)', async () => {
+    stubFetch(200, helloFixture);
+    const result = await lookupFreeDictionary('hello');
+    expect(result!.examples).toEqual([]);
   });
 
   it('returns null audio when no US recording exists', async () => {

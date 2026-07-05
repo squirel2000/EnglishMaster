@@ -32,23 +32,19 @@ export async function lookupWiktionary(
   if (!usages || usages.length === 0) return null;
 
   const definitions: DefinitionEntry[] = [];
-  const examples: ExampleEntry[] = [];
   for (const usage of usages) {
     for (const def of usage.definitions) {
       const text = stripHtml(def.definition);
-      if (text !== '') {
-        definitions.push({
-          partOfSpeech: usage.partOfSpeech.toLowerCase(),
-          definition: text,
-          // Chinese translation is attached later by lookup-service.
-          definitionZh: null,
-        });
-      }
-      for (const example of def.examples ?? []) {
-        const stripped = stripHtml(example);
-        // Chinese translation is attached later by lookup-service.
-        if (stripped !== '') examples.push({ en: stripped, zh: null });
-      }
+      // A definition that strips to nothing is skipped along with its
+      // examples: an example belongs to its sense, and the sense is not shown.
+      if (text === '') continue;
+      definitions.push({
+        partOfSpeech: usage.partOfSpeech.toLowerCase(),
+        definition: text,
+        // Chinese translations are attached later by lookup-service.
+        definitionZh: null,
+        example: firstSenseExample(def),
+      });
     }
   }
   if (definitions.length === 0) return null;
@@ -57,7 +53,8 @@ export async function lookupWiktionary(
     term,
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
-    examples,
+    // Supplemental examples are attached later by lookup-service (Tatoeba).
+    examples: [],
     // Wiktionary's definition endpoint carries no thesaurus data.
     synonyms: [],
     antonyms: [],
@@ -65,4 +62,17 @@ export async function lookupWiktionary(
     relatedPhrases: [],
     source: 'wiktionary',
   };
+}
+
+/**
+ * The sense's own example: the first source example that still has text
+ * after HTML stripping (at most one per sense), or null when none does.
+ */
+function firstSenseExample(def: WiktionaryDefinition): ExampleEntry | null {
+  for (const example of def.examples ?? []) {
+    const stripped = stripHtml(example);
+    // Chinese translations are attached later by lookup-service.
+    if (stripped !== '') return { en: stripped, zh: null };
+  }
+  return null;
 }

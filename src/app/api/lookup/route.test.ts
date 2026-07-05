@@ -10,12 +10,15 @@ const sample: LookupResult = {
   term: 'hello',
   pronunciation: { audioUrl: null, phonetic: '/həˈloʊ/' },
   definitions: [
-    { partOfSpeech: 'noun', definition: 'A greeting.', definitionZh: '問候語。' },
+    {
+      partOfSpeech: 'noun',
+      definition: 'A greeting.',
+      definitionZh: '問候語。',
+      example: { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
+    },
   ],
-  examples: [
-    { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
-    { en: 'Hello? Is anyone there?', zh: null },
-  ],
+  // Term-level supplements (更多例句).
+  examples: [{ en: 'Hello? Is anyone there?', zh: null }],
   synonyms: ['hi', 'greetings'],
   antonyms: ['goodbye'],
   relatedPhrases: ['hello there'],

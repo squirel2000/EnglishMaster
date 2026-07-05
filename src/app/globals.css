@@ -482,15 +482,22 @@ button {
   white-space: nowrap;
 }
 
+/* Definition line(s) + optional sense example stacked under one number. */
+.definition-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
 .definition-text {
   color: var(--paper);
 }
 
-/* Bilingual definition: Chinese leads at full ink, English follows dimmer. */
+/* Bilingual definition: Chinese leads at full ink, the English original
+   follows immediately on the same line in dimmer type, wrapping as text. */
 .definition-bilingual {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: block;
 }
 
 .definition-zh {
@@ -500,6 +507,17 @@ button {
 .definition-en {
   color: var(--paper-dim);
   font-size: 0.9375rem;
+  margin-inline-start: var(--space-2);
+}
+
+/* A sense's own example sits on the line after its definition: the quoted
+   English original first, the Traditional Chinese aid beneath — the same
+   visual language as the 更多例句 block. */
+.sense-example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--paper-dim);
 }
 
 .examples {

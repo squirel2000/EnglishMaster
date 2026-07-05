@@ -1,8 +1,8 @@
 ## 1. 例句歸屬釋義
 
-- [ ] 1.1 變更型別與來源：`DefinitionEntry` 新增 `example: ExampleEntry | null`；兩個 normalizer 改為將該定義的第一個來源例句掛進 `example`（不再攤平）；`LookupResult.examples` JSDoc 改標「補充例句」；同步修正 fixtures 與測試（TDD）
-- [ ] 1.2 重做 `lookup-service` 例句保證：計算顯示中前 5 筆釋義的義項例句總數，不足 2 時 Tatoeba 補充進 `examples`（與義項例句去重、合計 2-3）；翻譯批次涵蓋義項例句與補充例句（TDD：充足不補充、不足補充、去重、全部失敗容忍、批次計數）
-- [ ] 1.3 `DictionaryResult.tsx` 釋義區塊改組合排版（中文釋義＋英文緊接＋次行義項例句），例句區塊改為「更多例句」（僅有補充句時顯示）；`globals.css` 對應樣式；TDD：組合排版、無義項例句、更多例句顯示與省略
+- [x] 1.1 變更型別與來源：`DefinitionEntry` 新增 `example: ExampleEntry | null`；兩個 normalizer 改為將該定義的第一個來源例句掛進 `example`（不再攤平）；`LookupResult.examples` JSDoc 改標「補充例句」；同步修正 fixtures 與測試（TDD）
+- [x] 1.2 重做 `lookup-service` 例句保證：計算顯示中前 5 筆釋義的義項例句總數，不足 2 時 Tatoeba 補充進 `examples`（與義項例句去重、合計 2-3）；翻譯批次涵蓋義項例句與補充例句（TDD：充足不補充、不足補充、去重、全部失敗容忍、批次計數）
+- [x] 1.3 `DictionaryResult.tsx` 釋義區塊改組合排版（中文釋義＋英文緊接＋次行義項例句），例句區塊改為「更多例句」（僅有補充句時顯示）；`globals.css` 對應樣式；TDD：組合排版、無義項例句、更多例句顯示與省略
 
 ## 2. 片語繁中解釋
 

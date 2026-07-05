@@ -8,12 +8,15 @@ const lookupBody: LookupResult = {
   term: 'hello',
   pronunciation: { audioUrl: null, phonetic: '/həˈloʊ/' },
   definitions: [
-    { partOfSpeech: 'noun', definition: 'A greeting.', definitionZh: '問候語。' },
+    {
+      partOfSpeech: 'noun',
+      definition: 'A greeting.',
+      definitionZh: '問候語。',
+      example: { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
+    },
   ],
-  examples: [
-    { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
-    { en: 'Hello? Is anyone there?', zh: null },
-  ],
+  // Term-level supplements (更多例句).
+  examples: [{ en: 'Hello? Is anyone there?', zh: null }],
   synonyms: [],
   antonyms: [],
   relatedPhrases: [],
@@ -188,7 +191,12 @@ describe('Home page', () => {
       term: 'first',
       pronunciation: { audioUrl: null, phonetic: '/fɜːst/' },
       definitions: [
-        { partOfSpeech: 'noun', definition: 'First result.', definitionZh: null },
+        {
+          partOfSpeech: 'noun',
+          definition: 'First result.',
+          definitionZh: null,
+          example: null,
+        },
       ],
       examples: [],
       synonyms: [],
@@ -200,7 +208,12 @@ describe('Home page', () => {
       term: 'second',
       pronunciation: { audioUrl: null, phonetic: '/ˈsɛkənd/' },
       definitions: [
-        { partOfSpeech: 'noun', definition: 'Second result.', definitionZh: null },
+        {
+          partOfSpeech: 'noun',
+          definition: 'Second result.',
+          definitionZh: null,
+          example: null,
+        },
       ],
       examples: [],
       synonyms: [],
@@ -255,7 +268,12 @@ describe('Home page', () => {
       term: 'banana',
       pronunciation: { audioUrl: null, phonetic: '/bəˈnɑːnə/' },
       definitions: [
-        { partOfSpeech: 'noun', definition: 'A yellow fruit.', definitionZh: null },
+        {
+          partOfSpeech: 'noun',
+          definition: 'A yellow fruit.',
+          definitionZh: null,
+          example: null,
+        },
       ],
       examples: [],
       synonyms: [],

@@ -27,27 +27,43 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
           {result.definitions.map((entry, index) => (
             <li key={index} className="definition-item">
               <span className="pos-tag">{entry.partOfSpeech}</span>
-              {entry.definitionZh ? (
-                <span className="definition-text definition-bilingual">
-                  <span className="definition-zh" lang="zh-Hant">
-                    {entry.definitionZh}
+              <span className="definition-body">
+                {entry.definitionZh ? (
+                  <span className="definition-text definition-bilingual">
+                    <span className="definition-zh" lang="zh-Hant">
+                      {entry.definitionZh}
+                    </span>
+                    <span className="definition-en" lang="en">
+                      {entry.definition}
+                    </span>
                   </span>
-                  <span className="definition-en" lang="en">
+                ) : (
+                  <span className="definition-text" lang="en">
                     {entry.definition}
                   </span>
-                </span>
-              ) : (
-                <span className="definition-text" lang="en">
-                  {entry.definition}
-                </span>
-              )}
+                )}
+                {entry.example && (
+                  <span className="sense-example">
+                    <span className="example-en" lang="en">
+                      {entry.example.en}
+                    </span>
+                    {entry.example.zh && (
+                      <span className="example-zh" lang="zh-Hant">
+                        {entry.example.zh}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </span>
             </li>
           ))}
         </ol>
       </div>
+      {/* Term-level supplements only; sense examples live inside their own
+          definition item above. */}
       {result.examples.length > 0 && (
         <div className="entry-section">
-          <h3 className="eyebrow">例句</h3>
+          <h3 className="eyebrow">更多例句</h3>
           <ul className="examples" role="list">
             {result.examples.map((example) => (
               <li key={example.en} className="example-item">

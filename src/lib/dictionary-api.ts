@@ -1,4 +1,4 @@
-import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
+import type { DefinitionEntry, LookupResult } from './types';
 
 const BASE_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en/';
 
@@ -43,7 +43,6 @@ const MAX_THESAURUS_ITEMS = 8;
 
 function normalize(term: string, entries: ApiEntry[]): LookupResult {
   const definitions: DefinitionEntry[] = [];
-  const examples: ExampleEntry[] = [];
   // Sets keep insertion order, so first occurrence in document order wins.
   const synonyms = new Set<string>();
   const antonyms = new Set<string>();
@@ -57,11 +56,11 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
         definitions.push({
           partOfSpeech: meaning.partOfSpeech,
           definition: def.definition,
-          // Chinese translation is attached later by lookup-service.
+          // Chinese translations are attached later by lookup-service.
           definitionZh: null,
+          // The source example stays with its own sense, never flattened.
+          example: def.example ? { en: def.example, zh: null } : null,
         });
-        // Chinese translation is attached later by lookup-service.
-        if (def.example) examples.push({ en: def.example, zh: null });
       }
     }
   }
@@ -72,7 +71,8 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
       phonetic: pickPhonetic(entries),
     },
     definitions,
-    examples,
+    // Supplemental examples are attached later by lookup-service (Tatoeba).
+    examples: [],
     synonyms: [...synonyms].slice(0, MAX_THESAURUS_ITEMS),
     antonyms: [...antonyms].slice(0, MAX_THESAURUS_ITEMS),
     // Related phrases are attached later by lookup-service (Datamuse).

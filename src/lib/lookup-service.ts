@@ -6,8 +6,9 @@ import { translateSegment } from './translation-api';
 import type { ExampleEntry, LookupErrorCode, LookupResult } from './types';
 import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
-const MIN_EXAMPLES = 2;
-const MAX_EXAMPLES = 3;
+/** Sense examples plus supplements must total 2-3 visible sentences. */
+const MIN_TOTAL_EXAMPLES = 2;
+const MAX_TOTAL_EXAMPLES = 3;
 const MAX_DEFINITIONS = 5;
 const MAX_RELATED_PHRASES = 6;
 
@@ -37,7 +38,15 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
     return { ok: false, error: sawServiceError ? 'service-unavailable' : 'not-found' };
   }
 
-  const base = await withGuaranteedExamples(term, result);
+  // Only the first MAX_DEFINITIONS senses are displayed (source order
+  // reflects common usage), so truncate before the example guarantee:
+  // senses beyond the cut must not count toward the on-screen example
+  // total, nor consume translation quota.
+  const displayed: LookupResult = {
+    ...result,
+    definitions: result.definitions.slice(0, MAX_DEFINITIONS),
+  };
+  const base = await withSupplementalExamples(term, displayed);
   // The translation batch and the Datamuse phrase fetch are independent
   // enrichment arms, so they run in parallel. Each owns its own failures
   // (null Chinese text / empty phrase list); the extra catch keeps a
@@ -50,17 +59,69 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
   return { ok: true, result: { ...translated, relatedPhrases } };
 }
 
+/** The examples attached to the displayed senses, in definition order. */
+function senseExamplesOf(result: LookupResult): ExampleEntry[] {
+  return result.definitions.flatMap((entry) =>
+    entry.example ? [entry.example] : [],
+  );
+}
+
 /**
- * Keep the first MAX_DEFINITIONS definitions (source order reflects common
- * usage) and translate them plus every example sentence to Traditional
- * Chinese in one parallel batch (at most 5 + 3 segments per lookup).
- * Translation is best-effort: a failed or quota-exhausted segment leaves
- * its Chinese text null and must never fail the lookup itself.
+ * Guarantee 2-3 visible example sentences per entry. Sense examples on the
+ * displayed definitions count first; only when they number fewer than
+ * MIN_TOTAL_EXAMPLES does Tatoeba fill the gap with term-level supplemental
+ * examples (更多例句), deduped on the English sentence against the sense
+ * examples and one another. Supplements are never attributed to a specific
+ * sense: Tatoeba sentences are term-level data, so pinning one to a sense
+ * would fake an attribution the source never made.
+ */
+async function withSupplementalExamples(
+  term: string,
+  result: LookupResult,
+): Promise<LookupResult> {
+  const senseExamples = senseExamplesOf(result);
+  if (senseExamples.length >= MIN_TOTAL_EXAMPLES) {
+    return { ...result, examples: [] };
+  }
+  try {
+    const candidates = await fetchTatoebaExamples(
+      term,
+      MAX_TOTAL_EXAMPLES,
+      AbortSignal.timeout(TIMEOUT_MS),
+    );
+    const seen = new Set(senseExamples.map((example) => example.en));
+    const supplements: ExampleEntry[] = [];
+    for (const en of candidates) {
+      if (senseExamples.length + supplements.length >= MAX_TOTAL_EXAMPLES) break;
+      if (seen.has(en)) continue;
+      seen.add(en);
+      // Supplements enter untranslated and get their Chinese text in the
+      // combined batch later.
+      supplements.push({ en, zh: null });
+    }
+    return { ...result, examples: supplements };
+  } catch {
+    // Supplementation must never break an otherwise successful lookup.
+    return { ...result, examples: [] };
+  }
+}
+
+/**
+ * Translate every displayed text segment to Traditional Chinese in one
+ * parallel batch: the (already truncated) definitions, their attached sense
+ * examples, and the supplemental examples — at most 5 + 5 segments per
+ * lookup. Translation is best-effort: a failed or quota-exhausted segment
+ * leaves its Chinese text null and must never fail the lookup itself.
  */
 async function withTranslations(result: LookupResult): Promise<LookupResult> {
-  const definitions = result.definitions.slice(0, MAX_DEFINITIONS);
+  const senseExamples = senseExamplesOf(result);
+  // Segment layout: [0, senseBase) definitions, [senseBase, supplementBase)
+  // sense examples in definition order, [supplementBase, ...) supplements.
+  const senseBase = result.definitions.length;
+  const supplementBase = senseBase + senseExamples.length;
   const segments = [
-    ...definitions.map((entry) => entry.definition),
+    ...result.definitions.map((entry) => entry.definition),
+    ...senseExamples.map((example) => example.en),
     ...result.examples.map((example) => example.en),
   ];
   const outcomes = await Promise.allSettled(
@@ -72,56 +133,21 @@ async function withTranslations(result: LookupResult): Promise<LookupResult> {
       ? outcome.value.result.translated
       : null;
   };
+  // Walks the sense-example segment group in step with the definitions that
+  // carry an example, mirroring the order senseExamplesOf() emitted them in.
+  let senseIndex = senseBase;
   return {
     ...result,
-    definitions: definitions.map((entry, index) => ({
+    definitions: result.definitions.map((entry, index) => ({
       ...entry,
       definitionZh: zhFor(index),
+      example: entry.example
+        ? { ...entry.example, zh: zhFor(senseIndex++) }
+        : null,
     })),
     examples: result.examples.map((example, index) => ({
       ...example,
-      zh: zhFor(definitions.length + index),
+      zh: zhFor(supplementBase + index),
     })),
   };
-}
-
-async function withGuaranteedExamples(
-  term: string,
-  result: LookupResult,
-): Promise<LookupResult> {
-  // Dedupe up front: duplicate sentences would waste translation quota and
-  // collide as React keys, and only unique examples count toward the minimum.
-  const unique = dedupeByEnglish(result.examples);
-  if (unique.length >= MIN_EXAMPLES) {
-    return { ...result, examples: unique.slice(0, MAX_EXAMPLES) };
-  }
-  try {
-    const extra = await fetchTatoebaExamples(
-      term,
-      MAX_EXAMPLES,
-      AbortSignal.timeout(TIMEOUT_MS),
-    );
-    // Tatoeba supplements enter untranslated and get their Chinese text in
-    // the combined batch later.
-    const merged = dedupeByEnglish([
-      ...unique,
-      ...extra.map((en): ExampleEntry => ({ en, zh: null })),
-    ]);
-    return { ...result, examples: merged.slice(0, MAX_EXAMPLES) };
-  } catch {
-    // Supplementation must never break an otherwise successful lookup.
-    return { ...result, examples: unique };
-  }
-}
-
-/** First occurrence wins, order preserved. */
-function dedupeByEnglish(examples: ExampleEntry[]): ExampleEntry[] {
-  const seen = new Set<string>();
-  const unique: ExampleEntry[] = [];
-  for (const example of examples) {
-    if (seen.has(example.en)) continue;
-    seen.add(example.en);
-    unique.push(example);
-  }
-  return unique;
 }
