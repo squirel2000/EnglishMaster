@@ -40,4 +40,9 @@ describe('DictionaryResult', () => {
     );
     expect(screen.queryByText(/^\//)).not.toBeInTheDocument();
   });
+
+  it('omits the examples section when there are no examples', () => {
+    render(<DictionaryResult result={{ ...sample, examples: [] }} />);
+    expect(screen.queryByText('例句')).not.toBeInTheDocument();
+  });
 });

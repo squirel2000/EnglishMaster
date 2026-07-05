@@ -7,11 +7,23 @@ interface TranslationResultViewProps {
 
 export function TranslationResultView({ result }: TranslationResultViewProps) {
   return (
-    <section>
-      <h2>整句翻譯</h2>
-      <p lang="en">{result.original}</p>
-      <PronunciationButton text={result.original} audioUrl={null} />
-      <p lang="zh-Hant">{result.translated}</p>
+    <section className="sentence-card">
+      <div className="sentence-head">
+        <div className="entry-section">
+          <h3 className="eyebrow">原句</h3>
+          <h2 className="sentence-original" lang="en">
+            {result.original}
+          </h2>
+        </div>
+        <PronunciationButton text={result.original} audioUrl={null} />
+      </div>
+      <hr className="entry-divider" />
+      <div className="entry-section">
+        <h3 className="eyebrow">中文翻譯</h3>
+        <p className="sentence-translation" lang="zh-Hant">
+          {result.translated}
+        </p>
+      </div>
     </section>
   );
 }
