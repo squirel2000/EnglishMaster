@@ -32,6 +32,37 @@ afterEach(() => {
 });
 
 describe('Home page', () => {
+  it('shows clickable example query suggestions in the idle state', () => {
+    render(<Home />);
+    expect(screen.getByRole('button', { name: 'give up' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'break the ice' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'How are you doing today?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('runs a dictionary lookup when an example suggestion is clicked', async () => {
+    stubFetchRoutes({ '/api/lookup': { status: 200, body: lookupBody } });
+    render(<Home />);
+    await userEvent.click(screen.getByRole('button', { name: 'give up' }));
+    expect(await screen.findByRole('heading', { name: 'hello' })).toBeInTheDocument();
+    expect(screen.getByText('A greeting.')).toBeInTheDocument();
+  });
+
+  it('runs a sentence translation when a sentence example suggestion is clicked', async () => {
+    stubFetchRoutes({
+      '/api/translate': {
+        status: 200,
+        body: { original: 'How are you doing today?', translated: '您今天好嗎？' },
+      },
+    });
+    render(<Home />);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'How are you doing today?' }),
+    );
+    expect(await screen.findByText('您今天好嗎？')).toBeInTheDocument();
+  });
+
   it('routes a word to dictionary lookup and shows the result', async () => {
     stubFetchRoutes({ '/api/lookup': { status: 200, body: lookupBody } });
     render(<Home />);

@@ -10,6 +10,8 @@ import type { LookupResult, TranslationResult } from '@/lib/types';
 
 type Mode = 'dictionary' | 'sentence';
 
+const EXAMPLES = ['give up', 'break the ice', 'How are you doing today?'];
+
 type ViewState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -76,32 +78,63 @@ export default function Home() {
   }
 
   return (
-    <main>
-      <h1>EnglishMaster</h1>
-      <SearchBox onSearch={(query) => void runSearch(query)} />
-      {state.status === 'loading' && <p>查詢中…</p>}
-      {state.status === 'dictionary' && (
-        <>
-          <DictionaryResult result={state.result} />
-          {switchButton(state.query, 'dictionary')}
-        </>
-      )}
-      {state.status === 'sentence' && (
-        <>
-          <TranslationResultView result={state.result} />
-          {switchButton(state.query, 'sentence')}
-        </>
-      )}
-      {state.status === 'error' && (
-        <>
-          <p role="alert">{state.message}</p>
-          {state.mode === 'sentence' && (
-            /* Spec: translation failure must not disable sentence pronunciation. */
-            <PronunciationButton text={state.query} audioUrl={null} />
+    <div className="page">
+      <header className="site-header">
+        <h1 className="wordmark">EnglishMaster</h1>
+        <p className="tagline">查字，也查懂它怎麼用。</p>
+      </header>
+      <main className="content">
+        <SearchBox onSearch={(query) => void runSearch(query)} />
+        <div className="results" aria-live="polite">
+          {state.status === 'idle' && (
+            <div className="state-idle">
+              <p>還沒查過任何東西，試試看：</p>
+              <div className="example-row">
+                {EXAMPLES.map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    className="example-chip"
+                    onClick={() => runSearch(example)}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          {switchButton(state.query, state.mode)}
-        </>
-      )}
-    </main>
+          {state.status === 'loading' && (
+            <p className="state-loading">
+              <span className="spinner" aria-hidden="true" />
+              查詢中…
+            </p>
+          )}
+          {state.status === 'dictionary' && (
+            <div className="result-block">
+              <DictionaryResult result={state.result} />
+              <div className="switch-row">{switchButton(state.query, 'dictionary')}</div>
+            </div>
+          )}
+          {state.status === 'sentence' && (
+            <div className="result-block">
+              <TranslationResultView result={state.result} />
+              <div className="switch-row">{switchButton(state.query, 'sentence')}</div>
+            </div>
+          )}
+          {state.status === 'error' && (
+            <div className="result-block">
+              <p role="alert" className="error-banner">
+                {state.message}
+              </p>
+              {state.mode === 'sentence' && (
+                /* Spec: translation failure must not disable sentence pronunciation. */
+                <PronunciationButton text={state.query} audioUrl={null} />
+              )}
+              <div className="switch-row">{switchButton(state.query, state.mode)}</div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
