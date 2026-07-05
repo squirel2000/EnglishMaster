@@ -16,6 +16,6 @@
 
 ## 4. 驗證
 
-- [ ] 4.1 `npm run build` 與 `npm run lint` 通過
-- [ ] 4.2 `npm run test` 全數通過（既有測試隨形狀變更同步更新後仍綠）
-- [ ] 4.3 瀏覽器實測：查 hello 與 give up，確認義項例句排版（中→英→例句）、更多例句區塊行為、片語中文解釋、Anki 按鈕 disabled 狀態與零網路請求，無主控台錯誤
+- [x] 4.1 `npm run build` 與 `npm run lint` 通過
+- [x] 4.2 `npm run test` 全數通過（既有測試隨形狀變更同步更新後仍綠）
+- [x] 4.3 瀏覽器實測：查 hello 與 give up，確認義項例句排版（中→英→例句）、更多例句區塊行為、片語中文解釋、Anki 按鈕 disabled 狀態與零網路請求，無主控台錯誤
