@@ -26,9 +26,13 @@ export async function fetchRelatedPhrases(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return [];
-    const body = (await res.json()) as DatamuseWord[];
+    const body = (await res.json()) as Array<Partial<DatamuseWord> | null>;
     if (!Array.isArray(body)) return [];
-    return body.map((entry) => entry.word);
+    // Keep only well-formed entries and dedupe so React chip keys stay unique.
+    const words = body
+      .map((entry) => entry?.word)
+      .filter((word): word is string => typeof word === 'string');
+    return [...new Set(words)];
   } catch {
     return [];
   }

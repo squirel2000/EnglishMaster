@@ -63,4 +63,30 @@ describe('fetchRelatedPhrases', () => {
     stubFetch(200, { unexpected: 'shape' });
     await expect(fetchRelatedPhrases('give', 6)).resolves.toEqual([]);
   });
+
+  it('drops malformed elements instead of yielding non-strings', async () => {
+    stubFetch(200, [
+      { word: 'give in', score: 11022 },
+      {},
+      null,
+      { word: 42, score: 1 },
+      { word: 'give up', score: 9035 },
+    ]);
+    await expect(fetchRelatedPhrases('give', 6)).resolves.toEqual([
+      'give in',
+      'give up',
+    ]);
+  });
+
+  it('dedupes repeated phrases so chip keys stay unique', async () => {
+    stubFetch(200, [
+      { word: 'give in', score: 11022 },
+      { word: 'give in', score: 9000 },
+      { word: 'give up', score: 8000 },
+    ]);
+    await expect(fetchRelatedPhrases('give', 6)).resolves.toEqual([
+      'give in',
+      'give up',
+    ]);
+  });
 });
