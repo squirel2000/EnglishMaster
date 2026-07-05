@@ -67,6 +67,26 @@ describe('lookupTerm', () => {
     }
   });
 
+  it('dedupes duplicate primary examples without calling Tatoeba when 2+ remain', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'a', 'b']));
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.examples).toEqual(toExamples(['a', 'b']));
+    }
+    expect(fetchTatoebaExamples).not.toHaveBeenCalled();
+  });
+
+  it('supplements from Tatoeba when duplicates leave fewer than 2 unique examples', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a', 'a']));
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b']);
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.examples).toEqual(toExamples(['a', 'b']));
+    }
+  });
+
   it('keeps the result when Tatoeba supplementation fails', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a']));
     vi.mocked(fetchTatoebaExamples).mockRejectedValue(new Error('down'));
@@ -288,8 +308,10 @@ describe('lookupTerm example enrichment', () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult(['Ex one.', 'Ex two.'], definitions),
     );
-    // Resolve translations only once every segment (2 definitions +
-    // 2 examples) has been requested; chained batches would deadlock here.
+    // Hold every translation unresolved until the test releases them, then
+    // assert all segments (2 definitions + 2 examples) were requested at
+    // once. A chained implementation stalls below the expected count and
+    // fails the waitFor with a clear "expected 2 to be 4" diff.
     const expectedSegments = 4;
     let issued = 0;
     let releaseAll!: () => void;
@@ -298,11 +320,13 @@ describe('lookupTerm example enrichment', () => {
     });
     vi.mocked(translateSegment).mockImplementation(async (text) => {
       issued += 1;
-      if (issued === expectedSegments) releaseAll();
       await allIssued;
       return { ok: true, result: { original: text, translated: `中文：${text}` } };
     });
-    const outcome = await lookupTerm('give up');
+    const pending = lookupTerm('give up');
+    await vi.waitFor(() => expect(issued).toBe(expectedSegments));
+    releaseAll();
+    const outcome = await pending;
     expect(issued).toBe(expectedSegments);
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {

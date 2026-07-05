@@ -90,9 +90,14 @@ describe('translateSentence', () => {
     await translateSegment('Hello there.'); // seed the segment cache
     await translateSentence('Hello there.');
     await translateSentence('Hello there.');
-    // 1 segment request + 2 sentence requests: sentence-mode translation
-    // deliberately neither reads nor seeds the segment cache.
+    // 1 segment request + 2 sentence requests: sentence mode does not READ
+    // the segment cache.
     expect(mock).toHaveBeenCalledTimes(3);
+    // ...and does not SEED it either: a sentence-mode translation must not
+    // make the next segment-mode call a cache hit.
+    await translateSentence('Fresh sentence.');
+    await translateSegment('Fresh sentence.');
+    expect(mock).toHaveBeenCalledTimes(5);
   });
 });
 

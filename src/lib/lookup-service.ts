@@ -78,8 +78,11 @@ async function withGuaranteedExamples(
   term: string,
   result: LookupResult,
 ): Promise<LookupResult> {
-  if (result.examples.length >= MIN_EXAMPLES) {
-    return { ...result, examples: result.examples.slice(0, MAX_EXAMPLES) };
+  // Dedupe up front: duplicate sentences would waste translation quota and
+  // collide as React keys, and only unique examples count toward the minimum.
+  const unique = dedupeByEnglish(result.examples);
+  if (unique.length >= MIN_EXAMPLES) {
+    return { ...result, examples: unique.slice(0, MAX_EXAMPLES) };
   }
   try {
     const extra = await fetchTatoebaExamples(
@@ -87,22 +90,27 @@ async function withGuaranteedExamples(
       MAX_EXAMPLES,
       AbortSignal.timeout(TIMEOUT_MS),
     );
-    // Merge and dedupe on the English sentence; Tatoeba supplements enter
-    // untranslated and get their Chinese text in the combined batch later.
-    const merged: ExampleEntry[] = [];
-    const seen = new Set<string>();
-    const candidates = [
-      ...result.examples,
+    // Tatoeba supplements enter untranslated and get their Chinese text in
+    // the combined batch later.
+    const merged = dedupeByEnglish([
+      ...unique,
       ...extra.map((en): ExampleEntry => ({ en, zh: null })),
-    ];
-    for (const example of candidates) {
-      if (seen.has(example.en)) continue;
-      seen.add(example.en);
-      merged.push(example);
-    }
+    ]);
     return { ...result, examples: merged.slice(0, MAX_EXAMPLES) };
   } catch {
     // Supplementation must never break an otherwise successful lookup.
-    return result;
+    return { ...result, examples: unique };
   }
+}
+
+/** First occurrence wins, order preserved. */
+function dedupeByEnglish(examples: ExampleEntry[]): ExampleEntry[] {
+  const seen = new Set<string>();
+  const unique: ExampleEntry[] = [];
+  for (const example of examples) {
+    if (seen.has(example.en)) continue;
+    seen.add(example.en);
+    unique.push(example);
+  }
+  return unique;
 }
