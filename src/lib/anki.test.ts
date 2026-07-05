@@ -143,6 +143,23 @@ describe('buildAnkiNote', () => {
     expect(back).toContain('rock &amp; roll — 搖&lt;滾&gt;');
   });
 
+  it('escapes already-escaped source text again rather than trusting it', () => {
+    // Source data is plain text by contract; an entity in it is literal
+    // characters the learner should see, so double-escaping is deliberate.
+    const note = buildAnkiNote({
+      ...full,
+      definitions: [
+        {
+          partOfSpeech: 'noun',
+          definition: 'Ampersand written as &amp; in HTML.',
+          definitionZh: null,
+          example: null,
+        },
+      ],
+    });
+    expect(note.fields.Back).toContain('Ampersand written as &amp;amp; in HTML.');
+  });
+
   it('does not mutate the lookup result', () => {
     const input = structuredClone(full);
     buildAnkiNote(input);

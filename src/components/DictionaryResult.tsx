@@ -95,8 +95,9 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
  * src/lib/anki.ts, but the AnkiConnect link is not enabled yet
  * (isAnkiLinked is a constant false), so the button renders disabled with
  * an explanation and — being unclickable — never issues a network request.
- * The future enable-link change flips the flag and wires onClick to
- * buildAnkiNote plus the transport.
+ * The future enable-link change flips the flag, wires onClick to
+ * buildAnkiNote plus the transport, and must also make the unconditional
+ * title/aria-describedby hint below reflect the linked state.
  */
 function AddToAnkiButton() {
   const hintId = useId();

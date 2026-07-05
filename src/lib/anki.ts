@@ -6,6 +6,10 @@ import type { ExampleEntry, LookupResult } from './types';
  * POSTed to `http://127.0.0.1:8765` — is deliberately NOT implemented in
  * this change; it belongs to the future change that enables the link (and
  * flips `isAnkiLinked`). Nothing in this module performs network I/O.
+ *
+ * Transport-change note: AnkiConnect rejects duplicate notes by default, so
+ * re-adding a previously saved term fails unless the transport opts into
+ * `options.allowDuplicate` — that policy is the enable-link change's call.
  */
 
 /**
