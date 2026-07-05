@@ -370,6 +370,49 @@ describe('lookupTerm example enrichment', () => {
     expect(translateSegment).toHaveBeenCalledWith('Never give up.');
   });
 
+  it('maps sense-example translations onto the right senses when an example-less sense precedes them', async () => {
+    // def[0] has no example, so def[1]'s example owns sense segment 0.
+    // An offset regression that indexes by definition position
+    // (senseBase + defIndex) hands def[1] the first supplement instead.
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult([defEntry('Def one.'), defEntry('Def two.', 'Ex two.')]),
+    );
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['Sup one.', 'Sup two.']);
+    echoTranslate();
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        null,
+        { en: 'Ex two.', zh: '中文：Ex two.' },
+      ]);
+      expect(outcome.result.examples).toEqual([
+        { en: 'Sup one.', zh: '中文：Sup one.' },
+        { en: 'Sup two.', zh: '中文：Sup two.' },
+      ]);
+    }
+  });
+
+  it('counts duplicate sense examples across senses toward the gate and never dedupes them', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult([
+        defEntry('To surrender.', 'They gave up.'),
+        defEntry('To stop or quit.', 'They gave up.'),
+      ]),
+    );
+    const outcome = await lookupTerm('give up');
+    expect(fetchTatoebaExamples).not.toHaveBeenCalled();
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      // Attribution is per-sense: each sense keeps its own copy.
+      expect(outcome.result.definitions.map((d) => d.example?.en)).toEqual([
+        'They gave up.',
+        'They gave up.',
+      ]);
+      expect(outcome.result.examples).toEqual([]);
+    }
+  });
+
   it('translates Tatoeba supplements like sense examples', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult([defEntry('To surrender.', 'a')]),
