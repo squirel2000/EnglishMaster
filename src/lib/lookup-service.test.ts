@@ -4,7 +4,7 @@ import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
 import { translateSegment } from './translation-api';
-import type { DefinitionEntry, LookupResult } from './types';
+import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
 
 vi.mock('./dictionary-api');
 vi.mock('./wiktionary-api');
@@ -15,6 +15,11 @@ const surrenderOnly: DefinitionEntry[] = [
   { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: null },
 ];
 
+/** Untranslated example entries, the shape normalizers hand to lookup-service. */
+function toExamples(sentences: string[]): ExampleEntry[] {
+  return sentences.map((en) => ({ en, zh: null }));
+}
+
 function makeResult(
   examples: string[],
   definitions: DefinitionEntry[] = surrenderOnly,
@@ -23,7 +28,7 @@ function makeResult(
     term: 'give up',
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
-    examples,
+    examples: toExamples(examples),
     source: 'free-dictionary',
   };
 }
@@ -46,19 +51,19 @@ describe('lookupTerm', () => {
     const outcome = await lookupTerm('give up');
     expect(outcome).toEqual({
       ok: true,
-      result: expect.objectContaining({ examples: ['a', 'b', 'c'] }),
+      result: expect.objectContaining({ examples: toExamples(['a', 'b', 'c']) }),
     });
     expect(fetchTatoebaExamples).not.toHaveBeenCalled();
     expect(lookupWiktionary).not.toHaveBeenCalled();
   });
 
-  it('supplements examples from Tatoeba when fewer than 2, dedupes, caps at 3', async () => {
+  it('supplements examples from Tatoeba when fewer than 2, dedupes on the English sentence, caps at 3', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a']));
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['a', 'b', 'c']);
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.examples).toEqual(['a', 'b', 'c']);
+      expect(outcome.result.examples).toEqual(toExamples(['a', 'b', 'c']));
     }
   });
 
@@ -68,7 +73,7 @@ describe('lookupTerm', () => {
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.examples).toEqual(['a']);
+      expect(outcome.result.examples).toEqual(toExamples(['a']));
     }
   });
 
@@ -152,7 +157,9 @@ describe('lookupTerm definition enrichment', () => {
       });
       expect(outcome.result.definitions[4].definitionZh).toBe('中文：Sense 5.');
     }
-    expect(translateSegment).toHaveBeenCalledTimes(5);
+    // 5 definitions + 2 examples in the combined batch; senses 6-7 dropped.
+    expect(translateSegment).toHaveBeenCalledTimes(7);
+    expect(translateSegment).not.toHaveBeenCalledWith('Sense 6.');
   });
 
   it('nulls definitionZh for a failed segment while keeping the others', async () => {
@@ -191,6 +198,7 @@ describe('lookupTerm definition enrichment', () => {
         definitions: [
           { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: null },
         ],
+        examples: toExamples(['a', 'b']),
       }),
     });
   });
@@ -210,6 +218,102 @@ describe('lookupTerm definition enrichment', () => {
     if (outcome.ok) {
       expect(outcome.result.source).toBe('wiktionary');
       expect(outcome.result.definitions[0].definitionZh).toBe('放棄。');
+    }
+  });
+});
+
+describe('lookupTerm example enrichment', () => {
+  function echoTranslate() {
+    vi.mocked(translateSegment).mockImplementation(async (text) => ({
+      ok: true,
+      result: { original: text, translated: `中文：${text}` },
+    }));
+  }
+
+  it('attaches a Traditional Chinese translation to each example', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(['They gave up.', 'Never give up.']),
+    );
+    echoTranslate();
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.examples).toEqual([
+        { en: 'They gave up.', zh: '中文：They gave up.' },
+        { en: 'Never give up.', zh: '中文：Never give up.' },
+      ]);
+    }
+    expect(translateSegment).toHaveBeenCalledWith('They gave up.');
+    expect(translateSegment).toHaveBeenCalledWith('Never give up.');
+  });
+
+  it('translates Tatoeba-supplemented examples like source examples', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(makeResult(['a']));
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b', 'c']);
+    echoTranslate();
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.examples).toEqual([
+        { en: 'a', zh: '中文：a' },
+        { en: 'b', zh: '中文：b' },
+        { en: 'c', zh: '中文：c' },
+      ]);
+    }
+  });
+
+  it('nulls zh for a failed example sentence while keeping the others', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(['They gave up.', 'Never give up.']),
+    );
+    vi.mocked(translateSegment).mockImplementation(async (text) => {
+      if (text === 'Never give up.') throw new Error('translator crashed');
+      return { ok: true, result: { original: text, translated: `中文：${text}` } };
+    });
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.examples).toEqual([
+        { en: 'They gave up.', zh: '中文：They gave up.' },
+        { en: 'Never give up.', zh: null },
+      ]);
+    }
+  });
+
+  it('translates definitions and examples in one parallel batch', async () => {
+    const definitions: DefinitionEntry[] = [
+      { partOfSpeech: 'verb', definition: 'Def one.', definitionZh: null },
+      { partOfSpeech: 'verb', definition: 'Def two.', definitionZh: null },
+    ];
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(['Ex one.', 'Ex two.'], definitions),
+    );
+    // Resolve translations only once every segment (2 definitions +
+    // 2 examples) has been requested; chained batches would deadlock here.
+    const expectedSegments = 4;
+    let issued = 0;
+    let releaseAll!: () => void;
+    const allIssued = new Promise<void>((resolve) => {
+      releaseAll = resolve;
+    });
+    vi.mocked(translateSegment).mockImplementation(async (text) => {
+      issued += 1;
+      if (issued === expectedSegments) releaseAll();
+      await allIssued;
+      return { ok: true, result: { original: text, translated: `中文：${text}` } };
+    });
+    const outcome = await lookupTerm('give up');
+    expect(issued).toBe(expectedSegments);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions.map((d) => d.definitionZh)).toEqual([
+        '中文：Def one.',
+        '中文：Def two.',
+      ]);
+      expect(outcome.result.examples.map((e) => e.zh)).toEqual([
+        '中文：Ex one.',
+        '中文：Ex two.',
+      ]);
     }
   });
 });

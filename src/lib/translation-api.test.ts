@@ -83,6 +83,17 @@ describe('translateSentence', () => {
       error: 'service-unavailable',
     });
   });
+
+  it('bypasses the segment cache: identical sentences fetch every time', async () => {
+    clearSegmentCache();
+    const mock = stubFetchEcho();
+    await translateSegment('Hello there.'); // seed the segment cache
+    await translateSentence('Hello there.');
+    await translateSentence('Hello there.');
+    // 1 segment request + 2 sentence requests: sentence-mode translation
+    // deliberately neither reads nor seeds the segment cache.
+    expect(mock).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('translateSegment', () => {

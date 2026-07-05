@@ -1,4 +1,4 @@
-import type { DefinitionEntry, LookupResult } from './types';
+import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
 
 const BASE_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en/';
 
@@ -37,7 +37,7 @@ export async function lookupFreeDictionary(
 
 function normalize(term: string, entries: ApiEntry[]): LookupResult {
   const definitions: DefinitionEntry[] = [];
-  const examples: string[] = [];
+  const examples: ExampleEntry[] = [];
   for (const entry of entries) {
     for (const meaning of entry.meanings) {
       for (const def of meaning.definitions) {
@@ -47,7 +47,8 @@ function normalize(term: string, entries: ApiEntry[]): LookupResult {
           // Chinese translation is attached later by lookup-service.
           definitionZh: null,
         });
-        if (def.example) examples.push(def.example);
+        // Chinese translation is attached later by lookup-service.
+        if (def.example) examples.push({ en: def.example, zh: null });
       }
     }
   }

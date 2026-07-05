@@ -2,7 +2,7 @@ import { lookupFreeDictionary } from './dictionary-api';
 import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
 import { translateSegment } from './translation-api';
-import type { DefinitionEntry, LookupErrorCode, LookupResult } from './types';
+import type { ExampleEntry, LookupErrorCode, LookupResult } from './types';
 import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
 const MIN_EXAMPLES = 2;
@@ -36,33 +36,42 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
   }
 
   const base = await withGuaranteedExamples(term, result);
-  return { ok: true, result: await withTranslatedDefinitions(base) };
+  return { ok: true, result: await withTranslations(base) };
 }
 
 /**
  * Keep the first MAX_DEFINITIONS definitions (source order reflects common
- * usage) and translate them to Traditional Chinese in parallel. Translation
- * is best-effort: a failed or quota-exhausted segment leaves definitionZh
- * null and must never fail the lookup itself.
+ * usage) and translate them plus every example sentence to Traditional
+ * Chinese in one parallel batch (at most 5 + 3 segments per lookup).
+ * Translation is best-effort: a failed or quota-exhausted segment leaves
+ * its Chinese text null and must never fail the lookup itself.
  */
-async function withTranslatedDefinitions(
-  result: LookupResult,
-): Promise<LookupResult> {
+async function withTranslations(result: LookupResult): Promise<LookupResult> {
   const definitions = result.definitions.slice(0, MAX_DEFINITIONS);
+  const segments = [
+    ...definitions.map((entry) => entry.definition),
+    ...result.examples.map((example) => example.en),
+  ];
   const outcomes = await Promise.allSettled(
-    definitions.map((entry) => translateSegment(entry.definition)),
+    segments.map((text) => translateSegment(text)),
   );
-  const translated: DefinitionEntry[] = definitions.map((entry, index) => {
+  const zhFor = (index: number): string | null => {
     const outcome = outcomes[index];
-    return {
+    return outcome.status === 'fulfilled' && outcome.value.ok
+      ? outcome.value.result.translated
+      : null;
+  };
+  return {
+    ...result,
+    definitions: definitions.map((entry, index) => ({
       ...entry,
-      definitionZh:
-        outcome.status === 'fulfilled' && outcome.value.ok
-          ? outcome.value.result.translated
-          : null,
-    };
-  });
-  return { ...result, definitions: translated };
+      definitionZh: zhFor(index),
+    })),
+    examples: result.examples.map((example, index) => ({
+      ...example,
+      zh: zhFor(definitions.length + index),
+    })),
+  };
 }
 
 async function withGuaranteedExamples(
@@ -78,7 +87,19 @@ async function withGuaranteedExamples(
       MAX_EXAMPLES,
       AbortSignal.timeout(TIMEOUT_MS),
     );
-    const merged = [...new Set([...result.examples, ...extra])];
+    // Merge and dedupe on the English sentence; Tatoeba supplements enter
+    // untranslated and get their Chinese text in the combined batch later.
+    const merged: ExampleEntry[] = [];
+    const seen = new Set<string>();
+    const candidates = [
+      ...result.examples,
+      ...extra.map((en): ExampleEntry => ({ en, zh: null })),
+    ];
+    for (const example of candidates) {
+      if (seen.has(example.en)) continue;
+      seen.add(example.en);
+      merged.push(example);
+    }
     return { ...result, examples: merged.slice(0, MAX_EXAMPLES) };
   } catch {
     // Supplementation must never break an otherwise successful lookup.

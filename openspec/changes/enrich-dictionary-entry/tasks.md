@@ -6,8 +6,8 @@
 
 ## 2. 雙語例句（英＋中）
 
-- [ ] 2.1 變更型別：`examples` 由 `string[]` 改為 `{ en: string; zh: string | null }[]`；`lookup-service` 例句保證邏輯與 Tatoeba 合併去重改用 `en` 欄位；例句翻譯併入釋義翻譯批次；同步修正 fixtures 與測試
-- [ ] 2.2 `DictionaryResult.tsx` 例句改英中對照呈現（單句 zh 為 null 時僅英文）；`globals.css` 補樣式；TDD：對照顯示與單句降級測試
+- [x] 2.1 變更型別：`examples` 由 `string[]` 改為 `{ en: string; zh: string | null }[]`；`lookup-service` 例句保證邏輯與 Tatoeba 合併去重改用 `en` 欄位；例句翻譯併入釋義翻譯批次；同步修正 fixtures 與測試
+- [x] 2.2 `DictionaryResult.tsx` 例句改英中對照呈現（單句 zh 為 null 時僅英文）；`globals.css` 補樣式；TDD：對照顯示與單句降級測試
 
 ## 3. 同義字詞／反義字詞
 

@@ -12,11 +12,18 @@ export interface DefinitionEntry {
   definitionZh: string | null;
 }
 
+export interface ExampleEntry {
+  /** English example sentence */
+  en: string;
+  /** Traditional Chinese translation of the sentence; null when unavailable */
+  zh: string | null;
+}
+
 export interface LookupResult {
   term: string;
   pronunciation: Pronunciation;
   definitions: DefinitionEntry[];
-  examples: string[];
+  examples: ExampleEntry[];
   source: 'free-dictionary' | 'wiktionary';
 }
 

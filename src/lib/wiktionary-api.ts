@@ -1,4 +1,4 @@
-import type { DefinitionEntry, LookupResult } from './types';
+import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
 
 const BASE_URL = 'https://en.wiktionary.org/api/rest_v1/page/definition/';
 
@@ -32,7 +32,7 @@ export async function lookupWiktionary(
   if (!usages || usages.length === 0) return null;
 
   const definitions: DefinitionEntry[] = [];
-  const examples: string[] = [];
+  const examples: ExampleEntry[] = [];
   for (const usage of usages) {
     for (const def of usage.definitions) {
       const text = stripHtml(def.definition);
@@ -46,7 +46,8 @@ export async function lookupWiktionary(
       }
       for (const example of def.examples ?? []) {
         const stripped = stripHtml(example);
-        if (stripped !== '') examples.push(stripped);
+        // Chinese translation is attached later by lookup-service.
+        if (stripped !== '') examples.push({ en: stripped, zh: null });
       }
     }
   }

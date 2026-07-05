@@ -21,9 +21,10 @@ describe('lookupFreeDictionary', () => {
       definition: 'A greeting said when meeting someone.',
       definitionZh: null,
     });
+    // Chinese translations are attached later by lookup-service.
     expect(result!.examples).toEqual([
-      'Hello, everyone.',
-      'Hello? How may I help you?',
+      { en: 'Hello, everyone.', zh: null },
+      { en: 'Hello? How may I help you?', zh: null },
     ]);
   });
 

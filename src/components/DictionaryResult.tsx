@@ -29,11 +29,17 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
               <span className="pos-tag">{entry.partOfSpeech}</span>
               {entry.definitionZh ? (
                 <span className="definition-text definition-bilingual">
-                  <span className="definition-zh">{entry.definitionZh}</span>
-                  <span className="definition-en">{entry.definition}</span>
+                  <span className="definition-zh" lang="zh-Hant">
+                    {entry.definitionZh}
+                  </span>
+                  <span className="definition-en" lang="en">
+                    {entry.definition}
+                  </span>
                 </span>
               ) : (
-                <span className="definition-text">{entry.definition}</span>
+                <span className="definition-text" lang="en">
+                  {entry.definition}
+                </span>
               )}
             </li>
           ))}
@@ -44,8 +50,15 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
           <h3 className="eyebrow">例句</h3>
           <ul className="examples" role="list">
             {result.examples.map((example) => (
-              <li key={example} className="example-item">
-                {example}
+              <li key={example.en} className="example-item">
+                <span className="example-en" lang="en">
+                  {example.en}
+                </span>
+                {example.zh && (
+                  <span className="example-zh" lang="zh-Hant">
+                    {example.zh}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

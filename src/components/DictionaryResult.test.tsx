@@ -10,7 +10,10 @@ const sample: LookupResult = {
     { partOfSpeech: 'verb', definition: 'To surrender.', definitionZh: '放棄。' },
     { partOfSpeech: 'verb', definition: 'To stop or quit.', definitionZh: null },
   ],
-  examples: ['They gave up the search.', 'Never give up hope.'],
+  examples: [
+    { en: 'They gave up the search.', zh: '他們放棄了搜尋。' },
+    { en: 'Never give up hope.', zh: null },
+  ],
   source: 'free-dictionary',
 };
 
@@ -67,5 +70,38 @@ describe('DictionaryResult', () => {
   it('omits the examples section when there are no examples', () => {
     render(<DictionaryResult result={{ ...sample, examples: [] }} />);
     expect(screen.queryByText('例句')).not.toBeInTheDocument();
+  });
+
+  it('shows each example as the English original with the Chinese translation beneath', () => {
+    render(<DictionaryResult result={sample} />);
+    const item = screen.getByText('They gave up the search.').closest('li');
+    expect(item).not.toBeNull();
+    const en = item!.querySelector('.example-en');
+    const zh = item!.querySelector('.example-zh');
+    expect(en).toHaveTextContent('They gave up the search.');
+    expect(zh).toHaveTextContent('他們放棄了搜尋。');
+    // The English original leads; the Chinese aid follows.
+    expect(
+      en!.compareDocumentPosition(zh!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('falls back to English-only for an example without a Chinese translation', () => {
+    render(<DictionaryResult result={sample} />);
+    const item = screen.getByText('Never give up hope.').closest('li');
+    expect(item).not.toBeNull();
+    expect(item!.querySelector('.example-zh')).toBeNull();
+  });
+
+  it('tags English and Chinese lines with lang attributes', () => {
+    render(<DictionaryResult result={sample} />);
+    // Definitions: bilingual pair plus the English-only fallback.
+    expect(screen.getByText('To surrender.')).toHaveAttribute('lang', 'en');
+    expect(screen.getByText('放棄。')).toHaveAttribute('lang', 'zh-Hant');
+    expect(screen.getByText('To stop or quit.')).toHaveAttribute('lang', 'en');
+    // Examples: bilingual pair plus the English-only fallback.
+    expect(screen.getByText('They gave up the search.')).toHaveAttribute('lang', 'en');
+    expect(screen.getByText('他們放棄了搜尋。')).toHaveAttribute('lang', 'zh-Hant');
+    expect(screen.getByText('Never give up hope.')).toHaveAttribute('lang', 'en');
   });
 });

@@ -26,9 +26,10 @@ describe('lookupWiktionary', () => {
       definition: 'To die.',
       definitionZh: null,
     });
+    // Chinese translations are attached later by lookup-service.
     expect(result!.examples).toEqual([
-      'The old horse finally kicked the bucket.',
-      'I think my sewing machine has kicked the bucket.',
+      { en: 'The old horse finally kicked the bucket.', zh: null },
+      { en: 'I think my sewing machine has kicked the bucket.', zh: null },
     ]);
     expect(JSON.stringify(result)).not.toContain('<');
   });

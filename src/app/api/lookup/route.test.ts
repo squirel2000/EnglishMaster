@@ -12,7 +12,10 @@ const sample: LookupResult = {
   definitions: [
     { partOfSpeech: 'noun', definition: 'A greeting.', definitionZh: '問候語。' },
   ],
-  examples: ['Hello, everyone.', 'Hello? Is anyone there?'],
+  examples: [
+    { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
+    { en: 'Hello? Is anyone there?', zh: null },
+  ],
   source: 'free-dictionary',
 };
 
