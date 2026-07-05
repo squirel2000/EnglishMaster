@@ -581,6 +581,28 @@ button {
   overflow-wrap: anywhere;
 }
 
+/* Related-phrase chips pair the English phrase with its Traditional
+   Chinese gloss inside one chip, split by a hairline. The gloss switches
+   to the body font — the mono stack is for English reference tokens, not
+   CJK — and stays at the chip's dim ink rather than a fainter tier: the
+   gloss is the payload of the chip, so it must not drop below the base
+   legibility. A glossless phrase renders the English half only, which is
+   exactly the base word chip. */
+.phrase-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+}
+
+.phrase-zh {
+  font-family:
+    var(--font-body), "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
+    system-ui, sans-serif;
+  border-inline-start: 1px solid var(--line);
+  padding-inline-start: var(--space-2);
+}
+
 .sentence-head {
   display: flex;
   align-items: flex-start;

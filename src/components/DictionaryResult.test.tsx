@@ -27,7 +27,12 @@ const sample: LookupResult = {
   ],
   synonyms: ['surrender', 'quit', 'abandon'],
   antonyms: ['persist', 'continue'],
-  relatedPhrases: ['give in', 'give up the ghost', 'give away'],
+  relatedPhrases: [
+    { en: 'give in', zh: '讓步' },
+    // No gloss: the chip must fall back to English-only.
+    { en: 'give up the ghost', zh: null },
+    { en: 'give away', zh: '贈送' },
+  ],
   source: 'free-dictionary',
 };
 
@@ -226,6 +231,32 @@ describe('DictionaryResult', () => {
     // Neighboring sections are guarded independently and stay visible.
     expect(screen.getByText('同義')).toBeInTheDocument();
     expect(screen.getByText('反義')).toBeInTheDocument();
+  });
+
+  it('pairs each related phrase with its Traditional Chinese gloss inside the chip', () => {
+    render(<DictionaryResult result={sample} />);
+    const chip = screen.getByText('give in').closest('li');
+    expect(chip).not.toBeNull();
+    const en = chip!.querySelector('.phrase-en');
+    const zh = chip!.querySelector('.phrase-zh');
+    expect(en).toHaveTextContent('give in');
+    expect(zh).toHaveTextContent('讓步');
+    expect(en).toHaveAttribute('lang', 'en');
+    expect(zh).toHaveAttribute('lang', 'zh-Hant');
+    // The English phrase leads; its gloss follows within the same chip.
+    expect(
+      en!.compareDocumentPosition(zh!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('falls back to an English-only chip for a phrase without a gloss', () => {
+    render(<DictionaryResult result={sample} />);
+    const chip = screen.getByText('give up the ghost').closest('li');
+    expect(chip).not.toBeNull();
+    expect(chip!.querySelector('.phrase-zh')).toBeNull();
+    // Bilingual neighbors are unaffected by this chip's degradation.
+    expect(screen.getByText('讓步')).toBeInTheDocument();
+    expect(screen.getByText('贈送')).toBeInTheDocument();
   });
 
   it('tags English and Chinese lines with lang attributes', () => {

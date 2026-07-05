@@ -12,6 +12,14 @@ export interface ExampleEntry {
   zh: string | null;
 }
 
+/**
+ * An English phrase (`en`) with its Traditional Chinese gloss (`zh`, null
+ * when translation is unavailable). Structurally the same bilingual pair as
+ * ExampleEntry; the alias keeps phrase call sites self-describing and lets
+ * the shapes diverge later without a rename ripple.
+ */
+export type PhraseEntry = ExampleEntry;
+
 export interface DefinitionEntry {
   partOfSpeech: string;
   definition: string;
@@ -40,11 +48,12 @@ export interface LookupResult {
   /** English antonyms aggregated from the source, deduped, at most 8 */
   antonyms: string[];
   /**
-   * Common phrases starting with the term, most frequent first, at most 6.
+   * Common phrases starting with the term, most frequent first, at most 6,
+   * each glossed in Traditional Chinese (zh null when translation fails).
    * Source-independent: normalizers emit [] and lookup-service fills the
    * list from Datamuse.
    */
-  relatedPhrases: string[];
+  relatedPhrases: PhraseEntry[];
   source: 'free-dictionary' | 'wiktionary';
 }
 

@@ -21,7 +21,7 @@ const sample: LookupResult = {
   examples: [{ en: 'Hello? Is anyone there?', zh: null }],
   synonyms: ['hi', 'greetings'],
   antonyms: ['goodbye'],
-  relatedPhrases: ['hello there'],
+  relatedPhrases: [{ en: 'hello there', zh: '你好啊' }],
   source: 'free-dictionary',
 };
 

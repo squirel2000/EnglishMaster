@@ -31,6 +31,14 @@ function toExamples(sentences: string[]): ExampleEntry[] {
   return sentences.map((en) => ({ en, zh: null }));
 }
 
+/** Every segment translates to a recognizable echo of its own text. */
+function echoTranslate() {
+  vi.mocked(translateSegment).mockImplementation(async (text) => ({
+    ok: true,
+    result: { original: text, translated: `中文：${text}` },
+  }));
+}
+
 /** Two senses carrying two examples: enough to skip supplementation. */
 function sufficientSenses(): DefinitionEntry[] {
   return [
@@ -50,7 +58,8 @@ function makeResult(definitions: DefinitionEntry[]): LookupResult {
     // assertions below, these prove thesaurus words never enter the batch.
     synonyms: ['syn'],
     antonyms: ['ant'],
-    // Normalizers always emit an empty list; Datamuse fills it later.
+    // Normalizers always emit an empty list; lookup-service fills it from
+    // Datamuse and the phrases are glossed in the translation batch.
     relatedPhrases: [],
     source: 'free-dictionary',
   };
@@ -64,8 +73,9 @@ beforeEach(() => {
     ok: false,
     error: 'service-unavailable',
   });
-  // Non-empty on purpose: together with the exact translation batch-count
-  // assertions below, this proves phrases never enter the translation batch.
+  // Two phrases by default: they join the translation batch, so the exact
+  // batch-count assertions below include them; with the translator
+  // unavailable their zh stays null.
   vi.mocked(fetchRelatedPhrases).mockResolvedValue(['give in', 'give away']);
 });
 
@@ -84,8 +94,12 @@ describe('lookupTerm', () => {
         // Thesaurus lists pass through untouched (and untranslated).
         synonyms: ['syn'],
         antonyms: ['ant'],
-        // Datamuse phrases attach untranslated, capped at 6 by the fetch.
-        relatedPhrases: ['give in', 'give away'],
+        // Datamuse phrases attach as bilingual entries, capped at 6 by the
+        // fetch; zh stays null while the translator is unavailable.
+        relatedPhrases: [
+          { en: 'give in', zh: null },
+          { en: 'give away', zh: null },
+        ],
       }),
     });
     expect(fetchRelatedPhrases).toHaveBeenCalledWith('give up', 6);
@@ -160,8 +174,9 @@ describe('lookupTerm', () => {
       ]);
       expect(outcome.result.examples).toEqual(toExamples(['s1', 's2', 's3']));
     }
-    // Truncated senses stay out of the batch: 5 definitions + 3 supplements.
-    expect(translateSegment).toHaveBeenCalledTimes(8);
+    // Truncated senses stay out of the batch: 5 definitions + 3 supplements
+    // + 2 phrases.
+    expect(translateSegment).toHaveBeenCalledTimes(10);
     expect(translateSegment).not.toHaveBeenCalledWith('Sense 6.');
     expect(translateSegment).not.toHaveBeenCalledWith('Ex six.');
   });
@@ -221,13 +236,6 @@ describe('lookupTerm', () => {
 });
 
 describe('lookupTerm definition enrichment', () => {
-  function echoTranslate() {
-    vi.mocked(translateSegment).mockImplementation(async (text) => ({
-      ok: true,
-      result: { original: text, translated: `中文：${text}` },
-    }));
-  }
-
   it('attaches a Traditional Chinese translation to each definition', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult(sufficientSenses()),
@@ -264,9 +272,9 @@ describe('lookupTerm definition enrichment', () => {
     }
     // Five sense examples on display: plenty, so no supplementation.
     expect(fetchTatoebaExamples).not.toHaveBeenCalled();
-    // 5 definitions + 5 sense examples in the combined batch; senses 6-7
-    // (and their examples) are dropped before translation.
-    expect(translateSegment).toHaveBeenCalledTimes(10);
+    // 5 definitions + 5 sense examples + 2 phrases in the combined batch;
+    // senses 6-7 (and their examples) are dropped before translation.
+    expect(translateSegment).toHaveBeenCalledTimes(12);
     expect(translateSegment).not.toHaveBeenCalledWith('Sense 6.');
     expect(translateSegment).not.toHaveBeenCalledWith('Ex 6.');
   });
@@ -336,20 +344,17 @@ describe('lookupTerm definition enrichment', () => {
     if (outcome.ok) {
       expect(outcome.result.source).toBe('wiktionary');
       expect(outcome.result.definitions[0].definitionZh).toBe('放棄。');
-      // Phrase enrichment is source-independent and runs on fallback too.
-      expect(outcome.result.relatedPhrases).toEqual(['give in', 'give away']);
+      // Phrase enrichment is source-independent and runs on fallback too
+      // (the uniform mock above glosses them all alike, so pin en only).
+      expect(outcome.result.relatedPhrases.map((p) => p.en)).toEqual([
+        'give in',
+        'give away',
+      ]);
     }
   });
 });
 
 describe('lookupTerm example enrichment', () => {
-  function echoTranslate() {
-    vi.mocked(translateSegment).mockImplementation(async (text) => ({
-      ok: true,
-      result: { original: text, translated: `中文：${text}` },
-    }));
-  }
-
   it('attaches a Traditional Chinese translation to each sense example', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult([
@@ -454,20 +459,21 @@ describe('lookupTerm example enrichment', () => {
     }
   });
 
-  it('translates definitions, sense examples, and supplements in one parallel batch', async () => {
+  it('translates definitions, sense examples, supplements, and phrases in one parallel batch', async () => {
     // One sense example only, so Tatoeba supplements two more: the batch
-    // spans all three segment groups and the echo mapping below proves each
-    // translated text lands back on its own segment.
+    // spans all four segment groups (the default phrase mock adds two) and
+    // the echo mapping below proves each translated text lands back on its
+    // own segment.
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult([defEntry('Def one.', 'Ex one.'), defEntry('Def two.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['Sup one.', 'Sup two.']);
     // Hold every translation unresolved until the test releases them, then
-    // assert all segments (2 definitions + 1 sense example + 2 supplements)
-    // were requested at once. A chained implementation stalls below the
-    // expected count and fails the waitFor with a clear "expected 2 to be 5"
-    // diff.
-    const expectedSegments = 5;
+    // assert all segments (2 definitions + 1 sense example + 2 supplements
+    // + 2 phrases) were requested at once. A chained implementation stalls
+    // below the expected count and fails the waitFor with a clear
+    // "expected 2 to be 7" diff.
+    const expectedSegments = 7;
     let issued = 0;
     let releaseAll!: () => void;
     const allIssued = new Promise<void>((resolve) => {
@@ -483,9 +489,9 @@ describe('lookupTerm example enrichment', () => {
     releaseAll();
     const outcome = await pending;
     expect(issued).toBe(expectedSegments);
-    // The Datamuse phrases (mocked non-empty) never enter the batch.
-    expect(translateSegment).not.toHaveBeenCalledWith('give in');
-    expect(translateSegment).not.toHaveBeenCalledWith('give away');
+    // The Datamuse phrases belong to the same single batch.
+    expect(translateSegment).toHaveBeenCalledWith('give in');
+    expect(translateSegment).toHaveBeenCalledWith('give away');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.result.definitions).toEqual([
@@ -506,18 +512,36 @@ describe('lookupTerm example enrichment', () => {
         { en: 'Sup one.', zh: '中文：Sup one.' },
         { en: 'Sup two.', zh: '中文：Sup two.' },
       ]);
+      expect(outcome.result.relatedPhrases).toEqual([
+        { en: 'give in', zh: '中文：give in' },
+        { en: 'give away', zh: '中文：give away' },
+      ]);
     }
   });
 });
 
 describe('lookupTerm related-phrase enrichment', () => {
-  it('fetches related phrases in parallel with the translation batch, not after it', async () => {
+  it('gathers Tatoeba and Datamuse in parallel, then glosses all four segment groups in a single translation wave', async () => {
+    // One sense example forces Tatoeba supplementation, so the gathering
+    // wave has two arms. Hold both open: each must have started while the
+    // other is still unresolved, and no translation may be requested before
+    // the wave lands (the phrase texts to gloss do not exist yet). A
+    // sequential implementation stalls a waitFor with a clear diff; an
+    // implementation that translates alongside the gathering trips the
+    // zero-segment assertion.
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult(sufficientSenses()),
+      makeResult([defEntry('Def one.', 'Ex one.'), defEntry('Def two.')]),
     );
-    // Hold both enrichment arms open and require each to have started while
-    // the other is still unresolved. A sequential implementation stalls one
-    // side and fails the waitFor with a clear diff.
+    let tatoebaRequested = false;
+    let releaseTatoeba!: () => void;
+    const tatoebaGate = new Promise<void>((resolve) => {
+      releaseTatoeba = resolve;
+    });
+    vi.mocked(fetchTatoebaExamples).mockImplementation(async () => {
+      tatoebaRequested = true;
+      await tatoebaGate;
+      return ['Sup one.'];
+    });
     let phrasesRequested = false;
     let releasePhrases!: () => void;
     const phrasesGate = new Promise<void>((resolve) => {
@@ -540,22 +564,75 @@ describe('lookupTerm related-phrase enrichment', () => {
     });
     const pending = lookupTerm('give up');
     await vi.waitFor(() => {
+      expect(tatoebaRequested).toBe(true);
       expect(phrasesRequested).toBe(true);
-      expect(segmentsIssued).toBe(4); // 2 definitions + 2 sense examples
     });
-    releaseSegments();
+    // Both gathering arms are in flight together and still unresolved, so
+    // the translation wave cannot have started.
+    expect(segmentsIssued).toBe(0);
+    releaseTatoeba();
     releasePhrases();
+    // One batch covers all four segment groups at once: 2 definitions +
+    // 1 sense example + 1 supplement + 1 phrase.
+    await vi.waitFor(() => expect(segmentsIssued).toBe(5));
+    releaseSegments();
     const outcome = await pending;
+    expect(segmentsIssued).toBe(5);
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.relatedPhrases).toEqual(['give in']);
-      expect(outcome.result.definitions[0].definitionZh).toBe('中文：To surrender.');
+      expect(outcome.result.definitions[0].definitionZh).toBe('中文：Def one.');
+      expect(outcome.result.examples).toEqual([
+        { en: 'Sup one.', zh: '中文：Sup one.' },
+      ]);
+      expect(outcome.result.relatedPhrases).toEqual([
+        { en: 'give in', zh: '中文：give in' },
+      ]);
+    }
+  });
+
+  it('attaches a Traditional Chinese gloss to each related phrase', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(sufficientSenses()),
+    );
+    echoTranslate();
+    const outcome = await lookupTerm('give up');
+    expect(translateSegment).toHaveBeenCalledWith('give in');
+    expect(translateSegment).toHaveBeenCalledWith('give away');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.relatedPhrases).toEqual([
+        { en: 'give in', zh: '中文：give in' },
+        { en: 'give away', zh: '中文：give away' },
+      ]);
+    }
+  });
+
+  it('nulls zh for a failed phrase gloss while keeping the others bilingual', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult(sufficientSenses()),
+    );
+    vi.mocked(translateSegment).mockImplementation(async (text) => {
+      if (text === 'give in') throw new Error('translator crashed');
+      return { ok: true, result: { original: text, translated: `中文：${text}` } };
+    });
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.relatedPhrases).toEqual([
+        { en: 'give in', zh: null },
+        { en: 'give away', zh: '中文：give away' },
+      ]);
+      // The failure stays confined to its own segment: definitions keep
+      // their translations.
+      expect(outcome.result.definitions[0].definitionZh).toBe(
+        '中文：To surrender.',
+      );
     }
   });
 
   it('keeps the lookup and returns empty phrases when the phrase source rejects unexpectedly', async () => {
     // The module contract is to resolve [] on failure; the orchestration
-    // still isolates a rejection so no enrichment arm can sink the lookup.
+    // still isolates a rejection so no gathering arm can sink the lookup.
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult(sufficientSenses()),
     );
@@ -570,7 +647,7 @@ describe('lookupTerm related-phrase enrichment', () => {
     }
   });
 
-  it('keeps related phrases when translation is unavailable', async () => {
+  it('keeps related phrases as English-only entries when translation is unavailable', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult(sufficientSenses()),
     );
@@ -578,7 +655,10 @@ describe('lookupTerm related-phrase enrichment', () => {
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.relatedPhrases).toEqual(['give in', 'give away']);
+      expect(outcome.result.relatedPhrases).toEqual([
+        { en: 'give in', zh: null },
+        { en: 'give away', zh: null },
+      ]);
       expect(outcome.result.definitions[0].definitionZh).toBeNull();
     }
   });

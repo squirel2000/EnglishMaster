@@ -3,7 +3,12 @@ import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
 import { fetchRelatedPhrases } from './datamuse-api';
 import { translateSegment } from './translation-api';
-import type { ExampleEntry, LookupErrorCode, LookupResult } from './types';
+import type {
+  ExampleEntry,
+  LookupErrorCode,
+  LookupResult,
+  PhraseEntry,
+} from './types';
 import { EXTERNAL_API_TIMEOUT_MS as TIMEOUT_MS } from './constants';
 
 /** Sense examples plus supplements must total 2-3 visible sentences. */
@@ -46,17 +51,23 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
     ...result,
     definitions: result.definitions.slice(0, MAX_DEFINITIONS),
   };
-  const base = await withSupplementalExamples(term, displayed);
-  // The translation batch and the Datamuse phrase fetch are independent
-  // enrichment arms, so they run in parallel. Each owns its own failures
-  // (null Chinese text / empty phrase list); the extra catch keeps a
-  // rejecting phrase source from sinking an otherwise successful lookup,
-  // mirroring the Tatoeba supplementation principle.
-  const [translated, relatedPhrases] = await Promise.all([
-    withTranslations(base),
+  // Two waves of enrichment. Wave 1 gathers raw English material from the
+  // independent sources in parallel: Tatoeba supplements and Datamuse
+  // phrases. Wave 2 is the single translation batch over every displayed
+  // segment — it runs after the gathering (not beside it) because the
+  // phrases it must gloss only exist once Datamuse returns. Each arm owns
+  // its own failures (missing supplements / empty phrase list); the extra
+  // catch keeps a rejecting phrase source from sinking an otherwise
+  // successful lookup, mirroring the Tatoeba supplementation principle.
+  const [base, phrases] = await Promise.all([
+    withSupplementalExamples(term, displayed),
     fetchRelatedPhrases(term, MAX_RELATED_PHRASES).catch((): string[] => []),
   ]);
-  return { ok: true, result: { ...translated, relatedPhrases } };
+  // Phrases enter untranslated and get their Traditional Chinese gloss in
+  // the combined batch, exactly like Tatoeba supplements.
+  const relatedPhrases: PhraseEntry[] = phrases.map((en) => ({ en, zh: null }));
+  const translated = await withTranslations({ ...base, relatedPhrases });
+  return { ok: true, result: translated };
 }
 
 /** The examples attached to the displayed senses, in definition order. */
@@ -109,20 +120,24 @@ async function withSupplementalExamples(
 /**
  * Translate every displayed text segment to Traditional Chinese in one
  * parallel batch: the (already truncated) definitions, their attached sense
- * examples, and the supplemental examples — at most 5 + 5 segments per
- * lookup. Translation is best-effort: a failed or quota-exhausted segment
- * leaves its Chinese text null and must never fail the lookup itself.
+ * examples, the supplemental examples, and the related phrases — at most
+ * 5 + 5 + 6 segments per lookup. Translation is best-effort: a failed or
+ * quota-exhausted segment leaves its Chinese text null and must never fail
+ * the lookup itself.
  */
 async function withTranslations(result: LookupResult): Promise<LookupResult> {
   const senseExamples = senseExamplesOf(result);
   // Segment layout: [0, senseBase) definitions, [senseBase, supplementBase)
-  // sense examples in definition order, [supplementBase, ...) supplements.
+  // sense examples in definition order, [supplementBase, phraseBase)
+  // supplements, [phraseBase, ...) related phrases.
   const senseBase = result.definitions.length;
   const supplementBase = senseBase + senseExamples.length;
+  const phraseBase = supplementBase + result.examples.length;
   const segments = [
     ...result.definitions.map((entry) => entry.definition),
     ...senseExamples.map((example) => example.en),
     ...result.examples.map((example) => example.en),
+    ...result.relatedPhrases.map((phrase) => phrase.en),
   ];
   const outcomes = await Promise.allSettled(
     segments.map((text) => translateSegment(text)),
@@ -148,6 +163,10 @@ async function withTranslations(result: LookupResult): Promise<LookupResult> {
     examples: result.examples.map((example, index) => ({
       ...example,
       zh: zhFor(supplementBase + index),
+    })),
+    relatedPhrases: result.relatedPhrases.map((phrase, index) => ({
+      ...phrase,
+      zh: zhFor(phraseBase + index),
     })),
   };
 }

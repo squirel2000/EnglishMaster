@@ -6,8 +6,8 @@
 
 ## 2. 片語繁中解釋
 
-- [ ] 2.1 `relatedPhrases` 改為 `{ en: string; zh: string | null }[]`：片語加入 `withTranslations` 單一批次（單筆失敗該筆 zh 為 null）；同步修正 fixtures 與測試（TDD：片語翻譯、單筆失敗降級、批次計數更新）
-- [ ] 2.2 片語 chip 改英中並列呈現（zh 為 null 時僅英文）；`globals.css` 補樣式；TDD：雙語顯示與降級
+- [x] 2.1 `relatedPhrases` 改為 `{ en: string; zh: string | null }[]`：片語加入 `withTranslations` 單一批次（單筆失敗該筆 zh 為 null）；同步修正 fixtures 與測試（TDD：片語翻譯、單筆失敗降級、批次計數更新）
+- [x] 2.2 片語 chip 改英中並列呈現（zh 為 null 時僅英文）；`globals.css` 補樣式；TDD：雙語顯示與降級
 
 ## 3. Anki 匯出預備
 
