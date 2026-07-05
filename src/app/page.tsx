@@ -43,6 +43,7 @@ export default function Home() {
         } else {
           const message =
             res.status === 404 ? MESSAGES.notFound : MESSAGES.serviceUnavailable;
+          if (requestId !== requestIdRef.current) return;
           setState({ status: 'error', query, mode, message });
         }
       } else {
@@ -55,6 +56,7 @@ export default function Home() {
         } else {
           const message =
             res.status === 429 ? MESSAGES.quotaExhausted : MESSAGES.serviceUnavailable;
+          if (requestId !== requestIdRef.current) return;
           setState({ status: 'error', query, mode, message });
         }
       }

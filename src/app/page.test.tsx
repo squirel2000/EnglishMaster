@@ -177,4 +177,49 @@ describe('Home page', () => {
     expect(screen.getByRole('heading', { name: 'second' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'first' })).not.toBeInTheDocument();
   });
+
+  it('ignores stale error response when a newer search already rendered a result', async () => {
+    // Query A: dictionary lookup, deferred until after query B resolves.
+    // Query B: resolves successfully and renders its heading.
+    // Then A resolves with 404 → stale guard must discard it.
+    let resolveA!: (v: Response) => void;
+    const promiseA = new Promise<Response>((res) => { resolveA = res; });
+
+    const bodyB: LookupResult = {
+      term: 'banana',
+      pronunciation: { audioUrl: null, phonetic: '/bəˈnɑːnə/' },
+      definitions: [{ partOfSpeech: 'noun', definition: 'A yellow fruit.' }],
+      examples: [],
+      source: 'free-dictionary',
+    };
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('apple')) return promiseA;
+      if (url.includes('banana')) return new Response(JSON.stringify(bodyB), { status: 200 });
+      throw new Error(`unexpected fetch: ${url}`);
+    }));
+
+    render(<Home />);
+    const textbox = screen.getByRole('textbox');
+
+    // Fire query A ("apple") — stays in-flight.
+    await userEvent.type(textbox, 'apple{enter}');
+    // Clear and fire query B ("banana") before A resolves.
+    await userEvent.clear(textbox);
+    await userEvent.type(textbox, 'banana{enter}');
+
+    // Query B resolves and renders its heading.
+    expect(await screen.findByRole('heading', { name: 'banana' })).toBeInTheDocument();
+
+    // Now resolve A with a 404 — stale guard must discard it.
+    resolveA(new Response(JSON.stringify({ error: 'not-found' }), { status: 404 }));
+
+    // Give React a tick to process any state update that should NOT happen.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // B's heading must still be visible; stale error must not appear.
+    expect(screen.getByRole('heading', { name: 'banana' })).toBeInTheDocument();
+    expect(screen.queryByText('找不到這個字詞，建議改用整句翻譯')).toBeNull();
+  });
 });
