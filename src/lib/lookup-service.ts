@@ -121,9 +121,10 @@ async function withSupplementalExamples(
  * Translate every displayed text segment to Traditional Chinese in one
  * parallel batch: the (already truncated) definitions, their attached sense
  * examples, the supplemental examples, and the related phrases — at most
- * 5 + 5 + 6 segments per lookup. Translation is best-effort: a failed or
- * quota-exhausted segment leaves its Chinese text null and must never fail
- * the lookup itself.
+ * 5 definitions + 5 examples (sense and supplements combined) + 6 phrases
+ * per lookup. Translation is best-effort: a failed or quota-exhausted
+ * segment leaves its Chinese text null and must never fail the lookup
+ * itself.
  */
 async function withTranslations(result: LookupResult): Promise<LookupResult> {
   const senseExamples = senseExamplesOf(result);

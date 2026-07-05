@@ -645,6 +645,9 @@ describe('lookupTerm related-phrase enrichment', () => {
       expect(outcome.result.definitions).toEqual(sufficientSenses());
       expect(outcome.result.examples).toEqual([]);
     }
+    // An empty phrase group contributes zero segments to the batch:
+    // 2 definitions + 2 sense examples only.
+    expect(translateSegment).toHaveBeenCalledTimes(4);
   });
 
   it('keeps related phrases as English-only entries when translation is unavailable', async () => {

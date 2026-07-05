@@ -42,9 +42,11 @@
   --radius-m: 10px;
   --radius-l: 16px;
 
-  /* next/font puts --font-mono on <html>, so it resolves here on :root. */
+  /* next/font puts --font-mono/--font-body on <html>, so they resolve on :root. */
   --font-stack-mono: var(--font-mono), ui-monospace, "Cascadia Mono", Consolas,
     monospace;
+  --font-stack-body: var(--font-body), "Noto Sans TC", "PingFang TC",
+    "Microsoft JhengHei", system-ui, sans-serif;
 }
 
 /* ---------------------------------------------------------------------
@@ -77,9 +79,7 @@ body {
       transparent 60%
     ),
     var(--ink-950);
-  font-family:
-    var(--font-body), "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
-    system-ui, sans-serif;
+  font-family: var(--font-stack-body);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -593,12 +593,11 @@ button {
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: var(--space-2);
+  row-gap: 0.15rem;
 }
 
 .phrase-zh {
-  font-family:
-    var(--font-body), "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
-    system-ui, sans-serif;
+  font-family: var(--font-stack-body);
   border-inline-start: 1px solid var(--line);
   padding-inline-start: var(--space-2);
 }
