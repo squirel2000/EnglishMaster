@@ -180,6 +180,29 @@ describe('lookupTerm', () => {
     }
   });
 
+  it('skips a definition that already has its own example without losing the assignment cursor', async () => {
+    // def[1] already carries its own example; only def[0] and def[2] are
+    // gaps. A cursor that resets (or advances) on a filled slot would either
+    // waste a supplement on def[1] or misassign def[2]'s.
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult([
+        defEntry('To stop.'),
+        defEntry('To surrender.', 'a'),
+        defEntry('To quit.'),
+      ]),
+    );
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b', 'c']);
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'b', zh: null },
+        { en: 'a', zh: null },
+        { en: 'c', zh: null },
+      ]);
+    }
+  });
+
   it('counts only the first five displayed definitions when deciding to supplement', async () => {
     // Examples live solely on senses 6-7, which are beyond the display cut:
     // the on-screen count is 0, so supplementation must kick in.
