@@ -238,6 +238,37 @@ describe('buildAnkiNote — no standalone example block on the back', () => {
     expect(back.match(/<i>/g)?.length).toBe(2);
   });
 
+  it('renders a definition with its own source example the same way as one whose example was positionally assigned', () => {
+    // buildAnkiNote never distinguishes provenance — both definitions carry
+    // the identical { en, zh } shape by the time it sees them. This mirrors
+    // one real result: some senses keep their own example, others receive a
+    // Tatoeba supplement assigned by lookup-service (Task 1).
+    const mixed: LookupResult = {
+      ...fullyExampled,
+      definitions: [
+        fullyExampled.definitions[0],
+        {
+          partOfSpeech: 'noun',
+          definition: 'A fortunate happenstance.',
+          definitionZh: '幸運的意外。',
+          // Same shape a positionally-assigned supplement would take.
+          example: { en: 'By serendipity, they met again.', zh: '巧合之下，他們又相遇了。' },
+        },
+      ],
+    };
+    const back = buildAnkiNote(mixed).fields.Back;
+    expect(back).toContain(
+      '(noun) 意外發現美好事物的能力。 — The occurrence of events by chance in a happy way.' +
+        '<br><i>Finding this book was pure serendipity.</i><br>發現這本書純粹是巧合帶來的驚喜。',
+    );
+    expect(back).toContain(
+      '(noun) 幸運的意外。 — A fortunate happenstance.' +
+        '<br><i>By serendipity, they met again.</i><br>巧合之下，他們又相遇了。',
+    );
+    expect(back.match(/<i>/g)?.length).toBe(2);
+    expect(back).not.toContain('更多例句');
+  });
+
   it('assembles a partially populated result (some definitions without examples) the same way, still with no separate example section', () => {
     const partial: LookupResult = {
       ...fullyExampled,

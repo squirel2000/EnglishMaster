@@ -365,6 +365,21 @@ describe('DictionaryResult — example placement is provenance-independent', () 
     });
   });
 
+  it('renders identically shaped examples when provenances are mixed within one result', () => {
+    // The real-world shape whenever senses are partially self-sufficient:
+    // one definition keeps its own example, the other's was assigned.
+    const mixed: LookupResult = {
+      ...giveUpStyle,
+      definitions: [giveUpStyle.definitions[0], serendipityStyle.definitions[0]],
+    };
+    const { container } = render(<DictionaryResult result={mixed} />);
+    const shapes = [...container.querySelectorAll('.sense-example')].map((el) =>
+      el.innerHTML.replace(/>[^<]*</g, '><'),
+    );
+    expect(shapes).toHaveLength(2);
+    expect(shapes[0]).toBe(shapes[1]);
+  });
+
   it('produces the identical .sense-example structural shape for both provenances', () => {
     const { container: giveUpContainer } = render(<DictionaryResult result={giveUpStyle} />);
     const giveUpShape = [...giveUpContainer.querySelectorAll('.sense-example')].map(
