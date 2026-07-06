@@ -10,6 +10,6 @@
 
 ## 3. 驗證
 
-- [ ] 3.1 `npm run build` 與 `npm run lint` 通過
-- [ ] 3.2 `npm run test` 全數通過
-- [ ] 3.3 瀏覽器實測：查 "give up"（義項自帶例句）與 "serendipity" 或 "master"（義項無例句，須補充），確認兩者釋義區塊的視覺結構一致、無獨立例句區塊、無主控台錯誤
+- [x] 3.1 `npm run build` 與 `npm run lint` 通過
+- [x] 3.2 `npm run test` 全數通過
+- [x] 3.3 瀏覽器實測：查 "give up"（義項自帶例句）與 "serendipity" 或 "master"（義項無例句，須補充），確認兩者釋義區塊的視覺結構一致、無獨立例句區塊、無主控台錯誤
