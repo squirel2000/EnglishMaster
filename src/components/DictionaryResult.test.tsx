@@ -265,3 +265,156 @@ describe('DictionaryResult', () => {
     expect(screen.getByText('他們放棄了搜尋。')).toHaveAttribute('lang', 'zh-Hant');
   });
 });
+
+/**
+ * Whether an example came from the sense itself or was positionally
+ * assigned by lookup-service, `DefinitionEntry.example` looks identical by
+ * the time it reaches this component: both are just an `ExampleEntry` on a
+ * definition. These tests prove the component treats the two provenances
+ * indistinguishably — same markup shape, and no standalone example section
+ * ever renders — rather than merely asserting each fixture happens to pass.
+ */
+describe('DictionaryResult — example placement is provenance-independent', () => {
+  // "give-up-style": every shown definition owns its example straight from
+  // the source (the dictionary API supplied one per sense).
+  const giveUpStyle: LookupResult = {
+    term: 'give up',
+    pronunciation: { audioUrl: null, phonetic: '/ɡɪv ʌp/' },
+    definitions: [
+      {
+        partOfSpeech: 'verb',
+        definition: 'To surrender.',
+        definitionZh: '放棄。',
+        example: { en: 'They gave up the search.', zh: '他們放棄了搜尋。' },
+      },
+      {
+        partOfSpeech: 'verb',
+        definition: 'To stop or quit.',
+        definitionZh: '停止；戒除。',
+        example: { en: 'She gave up smoking.', zh: '她戒菸了。' },
+      },
+    ],
+    synonyms: [],
+    antonyms: [],
+    relatedPhrases: [],
+    source: 'free-dictionary',
+  };
+
+  // "serendipity-style": the source provided no example for any shown
+  // sense. By the time this component receives the result, lookup-service
+  // has already assigned Tatoeba supplements into `.example` in display
+  // order (Task 1's job) — this fixture simulates that post-assignment
+  // state directly, since the component itself never knows or cares where
+  // an example came from.
+  const serendipityStyle: LookupResult = {
+    term: 'serendipity',
+    pronunciation: { audioUrl: null, phonetic: '/ˌsɛr.ənˈdɪp.ɪ.ti/' },
+    definitions: [
+      {
+        partOfSpeech: 'noun',
+        definition: 'The occurrence of events by chance in a happy way.',
+        definitionZh: '意外發現美好事物的能力；巧遇。',
+        example: {
+          en: 'Finding this book was pure serendipity.',
+          zh: '發現這本書純粹是巧合帶來的驚喜。',
+        },
+      },
+      {
+        partOfSpeech: 'noun',
+        definition: 'A fortunate happenstance.',
+        definitionZh: '幸運的意外。',
+        example: {
+          en: 'It was serendipity that brought them together.',
+          zh: '是命運的巧合讓他們相遇。',
+        },
+      },
+    ],
+    synonyms: [],
+    antonyms: [],
+    relatedPhrases: [],
+    source: 'wiktionary',
+  };
+
+  it.each([
+    ['give-up-style (sense-owned examples)', giveUpStyle],
+    ['serendipity-style (positionally-assigned supplements)', serendipityStyle],
+  ])('renders every definition example via .sense-example, regardless of provenance: %s', (_label, result) => {
+    render(<DictionaryResult result={result} />);
+    const items = screen.getAllByRole('listitem').filter((el) =>
+      el.classList.contains('definition-item'),
+    );
+    expect(items).toHaveLength(result.definitions.length);
+
+    items.forEach((item, index) => {
+      const def = result.definitions[index];
+      const senseExample = item.querySelector('.sense-example');
+      expect(senseExample).not.toBeNull();
+
+      const en = senseExample!.querySelector('.example-en');
+      const zh = senseExample!.querySelector('.example-zh');
+      expect(en).toHaveTextContent(def.example!.en);
+      expect(zh).toHaveTextContent(def.example!.zh!);
+      expect(en).toHaveAttribute('lang', 'en');
+      expect(zh).toHaveAttribute('lang', 'zh-Hant');
+      // The example line follows the definition text within the same item.
+      const definitionText = item.querySelector('.definition-text, .definition-bilingual');
+      expect(
+        definitionText!.compareDocumentPosition(senseExample!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+  });
+
+  it('produces the identical .sense-example structural shape for both provenances', () => {
+    const { container: giveUpContainer } = render(<DictionaryResult result={giveUpStyle} />);
+    const giveUpShape = [...giveUpContainer.querySelectorAll('.sense-example')].map(
+      (el) => el.innerHTML.replace(/>[^<]*</g, '><'), // strip text, keep tag/attr structure
+    );
+    const { container: serendipityContainer } = render(
+      <DictionaryResult result={serendipityStyle} />,
+    );
+    const serendipityShape = [
+      ...serendipityContainer.querySelectorAll('.sense-example'),
+    ].map((el) => el.innerHTML.replace(/>[^<]*</g, '><'));
+
+    expect(giveUpShape).toHaveLength(2);
+    expect(serendipityShape).toHaveLength(2);
+    expect(giveUpShape).toEqual(serendipityShape);
+  });
+
+  it.each([
+    ['give-up-style', giveUpStyle],
+    ['serendipity-style', serendipityStyle],
+  ])('renders no standalone example section for %s', (_label, result) => {
+    const { container } = render(<DictionaryResult result={result} />);
+    expect(screen.queryByText('更多例句')).not.toBeInTheDocument();
+    expect(container.querySelector('.examples')).toBeNull();
+    expect(container.querySelector('.example-item')).toBeNull();
+    expect(container.querySelector('ul.examples')).toBeNull();
+    // Every example on the page lives inside a .sense-example that is
+    // itself inside a .definition-item — there is no example rendered
+    // outside a definition.
+    const allExampleEns = container.querySelectorAll('.example-en');
+    allExampleEns.forEach((el) => {
+      expect(el.closest('.sense-example')).not.toBeNull();
+      expect(el.closest('.definition-item')).not.toBeNull();
+    });
+  });
+
+  it('does not render an empty example line for a definition with no assigned example, leaving others unaffected', () => {
+    const partiallyFilled: LookupResult = {
+      ...serendipityStyle,
+      definitions: [
+        serendipityStyle.definitions[0],
+        { ...serendipityStyle.definitions[1], example: null },
+      ],
+    };
+    render(<DictionaryResult result={partiallyFilled} />);
+    const items = screen
+      .getAllByRole('listitem')
+      .filter((el) => el.classList.contains('definition-item'));
+    expect(items[0].querySelector('.sense-example')).not.toBeNull();
+    expect(items[1].querySelector('.sense-example')).toBeNull();
+    expect(items[1].querySelector('.example-en')).toBeNull();
+  });
+});

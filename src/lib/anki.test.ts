@@ -171,3 +171,99 @@ describe('isAnkiLinked', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Whether a definition's `.example` was the sense's own or a Tatoeba
+ * supplement positionally assigned by lookup-service, buildAnkiNote sees
+ * only `ExampleEntry | null` on the definition — provenance is invisible
+ * here (Task 1 unified them upstream). These tests prove the back HTML
+ * always inlines each definition's example beside it, and that no separate
+ * example block or heading is assembled anywhere, for both a fully
+ * populated result and a partially populated one.
+ */
+describe('buildAnkiNote — no standalone example block on the back', () => {
+  // Every shown sense carries its own example directly from the source.
+  const fullyExampled: LookupResult = {
+    term: 'serendipity',
+    pronunciation: { audioUrl: null, phonetic: '/ˌsɛr.ənˈdɪp.ɪ.ti/' },
+    definitions: [
+      {
+        partOfSpeech: 'noun',
+        definition: 'The occurrence of events by chance in a happy way.',
+        definitionZh: '意外發現美好事物的能力。',
+        example: {
+          en: 'Finding this book was pure serendipity.',
+          zh: '發現這本書純粹是巧合帶來的驚喜。',
+        },
+      },
+      {
+        partOfSpeech: 'noun',
+        definition: 'A fortunate happenstance.',
+        definitionZh: '幸運的意外。',
+        example: {
+          en: 'It was serendipity that brought them together.',
+          zh: '是命運的巧合讓他們相遇。',
+        },
+      },
+    ],
+    synonyms: ['fluke', 'chance'],
+    antonyms: ['misfortune'],
+    relatedPhrases: [{ en: 'serendipity effect', zh: '巧合效應' }],
+    source: 'wiktionary',
+  };
+
+  it('assembles a full result with every definition example inline and no separate example section', () => {
+    const back = buildAnkiNote(fullyExampled).fields.Back;
+
+    // Each definition's example is inline, directly after its sense text.
+    expect(back).toContain(
+      '(noun) 意外發現美好事物的能力。 — The occurrence of events by chance in a happy way.' +
+        '<br><i>Finding this book was pure serendipity.</i><br>發現這本書純粹是巧合帶來的驚喜。',
+    );
+    expect(back).toContain(
+      '(noun) 幸運的意外。 — A fortunate happenstance.' +
+        '<br><i>It was serendipity that brought them together.</i><br>是命運的巧合讓他們相遇。',
+    );
+
+    // There is exactly one 釋義 block (the definitions list), not a second
+    // block carrying overflow/supplement examples.
+    const senseBlockCount = back.split('<b>釋義</b>').length - 1;
+    expect(senseBlockCount).toBe(1);
+
+    // No standalone example heading/label/wrapper exists anywhere on the back.
+    expect(back).not.toContain('更多例句');
+    expect(back).not.toMatch(/<b>例句<\/b>/);
+    // Exactly two <i> example sentences total — one per definition, none
+    // duplicated into a second section.
+    expect(back.match(/<i>/g)?.length).toBe(2);
+  });
+
+  it('assembles a partially populated result (some definitions without examples) the same way, still with no separate example section', () => {
+    const partial: LookupResult = {
+      ...fullyExampled,
+      definitions: [
+        fullyExampled.definitions[0],
+        { ...fullyExampled.definitions[1], example: null },
+      ],
+      synonyms: [],
+      antonyms: [],
+      relatedPhrases: [],
+    };
+    const back = buildAnkiNote(partial).fields.Back;
+
+    // The exampled sense keeps its inline example.
+    expect(back).toContain(
+      '(noun) 意外發現美好事物的能力。 — The occurrence of events by chance in a happy way.' +
+        '<br><i>Finding this book was pure serendipity.</i><br>發現這本書純粹是巧合帶來的驚喜。',
+    );
+    // The unexampled sense renders with no trailing <br><i> at all.
+    expect(back).toContain('(noun) 幸運的意外。 — A fortunate happenstance.</li>');
+
+    expect(back).not.toContain('更多例句');
+    expect(back).not.toMatch(/<b>例句<\/b>/);
+    const senseBlockCount = back.split('<b>釋義</b>').length - 1;
+    expect(senseBlockCount).toBe(1);
+    // Only the one example that exists renders, nowhere else.
+    expect(back.match(/<i>/g)?.length).toBe(1);
+  });
+});

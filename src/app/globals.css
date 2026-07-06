@@ -510,28 +510,11 @@ button {
   margin-inline-start: var(--space-2);
 }
 
-/* A sense's own example sits on the line after its definition: the quoted
-   English original first, the Traditional Chinese aid beneath — the same
-   visual language as the 更多例句 block. */
+/* A sense's own example — whether the source's own or a supplement
+   positionally assigned in display order — sits on the line after its
+   definition: the quoted English original first, the Traditional Chinese
+   aid beneath. There is no example rendered outside a definition. */
 .sense-example {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  color: var(--paper-dim);
-}
-
-.examples {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  border-left: 2px solid var(--line-soft);
-  padding-left: var(--space-4);
-}
-
-/* Bilingual example: the quoted English original leads (it is the sentence
-   the learner studies); the Chinese translation sits beneath it as an aid. */
-.example-item {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);

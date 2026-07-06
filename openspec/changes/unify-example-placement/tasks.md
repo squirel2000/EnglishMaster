@@ -5,8 +5,8 @@
 
 ## 2. 呈現層：移除獨立區塊
 
-- [ ] 2.1 `DictionaryResult.tsx` 移除「更多例句」區塊與其 JSX／CSS；確認例句一律隨釋義次行呈現，無論來源是義項自帶或依序指派；TDD：來源有義項例句、來源無義項例句（改用 serendipity 風格的 fixture）兩種情境畫面一致
-- [ ] 2.2 `anki.ts` 的 `buildAnkiNote` 移除獨立的補充例句背面段落；確認例句已隨每筆釋義呈現在背面釋義列表；TDD：完整組裝、部分資料組裝
+- [x] 2.1 `DictionaryResult.tsx` 移除「更多例句」區塊與其 JSX／CSS；確認例句一律隨釋義次行呈現，無論來源是義項自帶或依序指派；TDD：來源有義項例句、來源無義項例句（改用 serendipity 風格的 fixture）兩種情境畫面一致
+- [x] 2.2 `anki.ts` 的 `buildAnkiNote` 移除獨立的補充例句背面段落；確認例句已隨每筆釋義呈現在背面釋義列表；TDD：完整組裝、部分資料組裝
 
 ## 3. 驗證
 
