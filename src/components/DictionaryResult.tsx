@@ -62,27 +62,6 @@ export function DictionaryResult({ result }: DictionaryResultProps) {
           ))}
         </ol>
       </div>
-      {/* Term-level supplements only; sense examples live inside their own
-          definition item above. */}
-      {result.examples.length > 0 && (
-        <div className="entry-section">
-          <h3 className="eyebrow">更多例句</h3>
-          <ul className="examples" role="list">
-            {result.examples.map((example) => (
-              <li key={example.en} className="example-item">
-                <span className="example-en" lang="en">
-                  {example.en}
-                </span>
-                {example.zh && (
-                  <span className="example-zh" lang="zh-Hant">
-                    {example.zh}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       <WordChipsSection label="同義" words={result.synonyms} />
       <WordChipsSection label="反義" words={result.antonyms} />
       <PhraseChipsSection label="片語" phrases={result.relatedPhrases} />

@@ -53,8 +53,6 @@ export async function lookupWiktionary(
     term,
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
-    // Supplemental examples are attached later by lookup-service (Tatoeba).
-    examples: [],
     // Wiktionary's definition endpoint carries no thesaurus data.
     synonyms: [],
     antonyms: [],

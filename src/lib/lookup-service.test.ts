@@ -5,7 +5,7 @@ import { lookupWiktionary } from './wiktionary-api';
 import { fetchTatoebaExamples } from './tatoeba-api';
 import { fetchRelatedPhrases } from './datamuse-api';
 import { translateSegment } from './translation-api';
-import type { DefinitionEntry, ExampleEntry, LookupResult } from './types';
+import type { DefinitionEntry, LookupResult } from './types';
 
 vi.mock('./dictionary-api');
 vi.mock('./wiktionary-api');
@@ -24,11 +24,6 @@ function defEntry(definition: string, example: string | null = null): Definition
     definitionZh: null,
     example: example === null ? null : { en: example, zh: null },
   };
-}
-
-/** Untranslated supplemental entries, the shape Tatoeba sentences take. */
-function toExamples(sentences: string[]): ExampleEntry[] {
-  return sentences.map((en) => ({ en, zh: null }));
 }
 
 /** Every segment translates to a recognizable echo of its own text. */
@@ -52,8 +47,6 @@ function makeResult(definitions: DefinitionEntry[]): LookupResult {
     term: 'give up',
     pronunciation: { audioUrl: null, phonetic: null },
     definitions,
-    // Normalizers never fill the supplements list; lookup-service does.
-    examples: [],
     // Non-empty on purpose: together with the exact translation batch-count
     // assertions below, these prove thesaurus words never enter the batch.
     synonyms: ['syn'],
@@ -89,8 +82,6 @@ describe('lookupTerm', () => {
       ok: true,
       result: expect.objectContaining({
         definitions: sufficientSenses(),
-        // No supplements are needed, so the term-level list stays empty.
-        examples: [],
         // Thesaurus lists pass through untouched (and untranslated).
         synonyms: ['syn'],
         antonyms: ['ant'],
@@ -107,9 +98,9 @@ describe('lookupTerm', () => {
     expect(lookupWiktionary).not.toHaveBeenCalled();
   });
 
-  it('supplements from Tatoeba when sense examples fall short, deduped against them on the English sentence', async () => {
+  it('assigns a Tatoeba supplement to the example-less definition, deduped against the sense example on the English sentence', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('To surrender.', 'a')]),
+      makeResult([defEntry('To surrender.', 'a'), defEntry('To stop or quit.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['a', 'b', 'c']);
     const outcome = await lookupTerm('give up');
@@ -120,33 +111,72 @@ describe('lookupTerm', () => {
     );
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      // 'a' already belongs to a sense; 1 sense + 2 supplements = 3 total.
-      expect(outcome.result.examples).toEqual(toExamples(['b', 'c']));
-      expect(outcome.result.definitions[0].example).toEqual({ en: 'a', zh: null });
+      // 'a' already belongs to def[0] and is deduped out of the candidates;
+      // 'b' lands on the only example-less definition. 'c' has nowhere left
+      // to go (only one definition needed filling) and is dropped.
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'a', zh: null },
+        { en: 'b', zh: null },
+      ]);
     }
   });
 
-  it('caps supplements so sense examples plus supplements never exceed 3', async () => {
+  it('assigns supplements to multiple example-less definitions in definition order, capped so the total never exceeds 3', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('To surrender.', 'a')]),
+      makeResult([
+        defEntry('To surrender.', 'a'),
+        defEntry('To stop.'),
+        defEntry('To quit.'),
+      ]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b', 'c', 'd']);
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.examples).toEqual(toExamples(['b', 'c']));
+      // 1 sense example + up to 2 supplements = 3 total: 'b' and 'c' are
+      // assigned to the two example-less definitions in order; 'd' is
+      // fetched but never assigned since the cap was already reached.
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'a', zh: null },
+        { en: 'b', zh: null },
+        { en: 'c', zh: null },
+      ]);
     }
   });
 
-  it('takes up to 3 supplements when no displayed sense carries an example, deduped within', async () => {
+  it('assigns up to 3 supplements across definitions when no displayed sense carries an example, deduped within the candidates', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('To surrender.')]),
+      makeResult([defEntry('To surrender.'), defEntry('To stop.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b', 'b', 'c']);
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.examples).toEqual(toExamples(['b', 'c']));
+      // The duplicate 'b' candidate is deduped within the fetched list, so
+      // only 'b' and 'c' are ever assignable; both definitions receive one.
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'b', zh: null },
+        { en: 'c', zh: null },
+      ]);
+    }
+  });
+
+  it('leaves later definitions example-less when fetched supplements run out before every gap is filled', async () => {
+    vi.mocked(lookupFreeDictionary).mockResolvedValue(
+      makeResult([defEntry('To surrender.'), defEntry('To stop.'), defEntry('To quit.')]),
+    );
+    // Only one candidate for three example-less definitions.
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b']);
+    const outcome = await lookupTerm('give up');
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      // The first (display-order) definition receives the sole supplement;
+      // the rest simply stay example-less. No crash, no partial entries.
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'b', zh: null },
+        null,
+        null,
+      ]);
     }
   });
 
@@ -165,17 +195,19 @@ describe('lookupTerm', () => {
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.result.definitions).toHaveLength(5);
+      // All 3 fetched supplements are assigned in order to the first 3 of
+      // the 5 displayed (and example-less) definitions; senses 6-7 (and
+      // their own source examples) never entered the displayed set at all.
       expect(outcome.result.definitions.map((d) => d.example)).toEqual([
-        null,
-        null,
-        null,
+        { en: 's1', zh: null },
+        { en: 's2', zh: null },
+        { en: 's3', zh: null },
         null,
         null,
       ]);
-      expect(outcome.result.examples).toEqual(toExamples(['s1', 's2', 's3']));
     }
-    // Truncated senses stay out of the batch: 5 definitions + 3 supplements
-    // + 2 phrases.
+    // Truncated senses stay out of the batch: 5 definitions + 3 assigned
+    // examples + 2 phrases.
     expect(translateSegment).toHaveBeenCalledTimes(10);
     expect(translateSegment).not.toHaveBeenCalledWith('Sense 6.');
     expect(translateSegment).not.toHaveBeenCalledWith('Ex six.');
@@ -183,15 +215,18 @@ describe('lookupTerm', () => {
 
   it('keeps the result when Tatoeba supplementation fails', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('To surrender.', 'a')]),
+      makeResult([defEntry('To surrender.', 'a'), defEntry('To stop or quit.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockRejectedValue(new Error('down'));
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      // The sense example survives; the total may stay below 2.
-      expect(outcome.result.definitions[0].example).toEqual({ en: 'a', zh: null });
-      expect(outcome.result.examples).toEqual([]);
+      // The sense example survives; the example-less definition stays that
+      // way and the total may remain below 2. No crash.
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'a', zh: null },
+        null,
+      ]);
     }
   });
 
@@ -324,7 +359,6 @@ describe('lookupTerm definition enrichment', () => {
       ok: true,
       result: expect.objectContaining({
         definitions: sufficientSenses(),
-        examples: [],
       }),
     });
   });
@@ -375,25 +409,33 @@ describe('lookupTerm example enrichment', () => {
     expect(translateSegment).toHaveBeenCalledWith('Never give up.');
   });
 
-  it('maps sense-example translations onto the right senses when an example-less sense precedes them', async () => {
-    // def[0] has no example, so def[1]'s example owns sense segment 0.
-    // An offset regression that indexes by definition position
-    // (senseBase + defIndex) hands def[1] the first supplement instead.
+  it('maps example translations onto the right definitions when a permanently example-less definition leaves a gap in the merged group', async () => {
+    // def[0] and def[1] start with no example; only one Tatoeba supplement
+    // is available, so def[0] gets it (display order) and def[1] stays
+    // example-less — a genuine, permanent gap. def[2] keeps its own source
+    // example. The merged example group is therefore sparse (length 2)
+    // relative to definitions.length (3): def[2]'s example is the group's
+    // second entry (sparse rank 1) even though its definition index is 2.
+    // A regression that indexes by definition position (senseBase +
+    // defIndex) would read senseBase + 2 for def[2] — which spills into the
+    // first related-phrase's translation segment instead — visibly handing
+    // def[2]'s example the wrong (phrase) zh text.
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('Def one.'), defEntry('Def two.', 'Ex two.')]),
+      makeResult([
+        defEntry('Def one.'),
+        defEntry('Def two.'),
+        defEntry('Def three.', 'Ex three.'),
+      ]),
     );
-    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['Sup one.', 'Sup two.']);
+    vi.mocked(fetchTatoebaExamples).mockResolvedValue(['Sup one.']);
     echoTranslate();
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.result.definitions.map((d) => d.example)).toEqual([
-        null,
-        { en: 'Ex two.', zh: '中文：Ex two.' },
-      ]);
-      expect(outcome.result.examples).toEqual([
         { en: 'Sup one.', zh: '中文：Sup one.' },
-        { en: 'Sup two.', zh: '中文：Sup two.' },
+        null,
+        { en: 'Ex three.', zh: '中文：Ex three.' },
       ]);
     }
   });
@@ -414,26 +456,23 @@ describe('lookupTerm example enrichment', () => {
         'They gave up.',
         'They gave up.',
       ]);
-      expect(outcome.result.examples).toEqual([]);
     }
   });
 
-  it('translates Tatoeba supplements like sense examples', async () => {
+  it('translates an assigned Tatoeba supplement like a sense example', async () => {
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
-      makeResult([defEntry('To surrender.', 'a')]),
+      makeResult([defEntry('To surrender.', 'a'), defEntry('To stop or quit.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['b', 'c']);
     echoTranslate();
     const outcome = await lookupTerm('give up');
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
-      expect(outcome.result.definitions[0].example).toEqual({
-        en: 'a',
-        zh: '中文：a',
-      });
-      expect(outcome.result.examples).toEqual([
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'a', zh: '中文：a' },
+        // 'b' is assigned to the only example-less definition; 'c' is
+        // fetched but never assigned (no more gaps to fill).
         { en: 'b', zh: '中文：b' },
-        { en: 'c', zh: '中文：c' },
       ]);
     }
   });
@@ -459,21 +498,24 @@ describe('lookupTerm example enrichment', () => {
     }
   });
 
-  it('translates definitions, sense examples, supplements, and phrases in one parallel batch', async () => {
-    // One sense example only, so Tatoeba supplements two more: the batch
-    // spans all four segment groups (the default phrase mock adds two) and
-    // the echo mapping below proves each translated text lands back on its
-    // own segment.
+  it('translates definitions, their (now uniformly-sourced) examples, and phrases in one merged parallel batch', async () => {
+    // def[0] keeps its own sense example; def[1] starts example-less and
+    // receives the first Tatoeba supplement (display order). The second
+    // fetched supplement has no gap left to fill and is dropped before
+    // translation ever runs, so it must never consume a batch segment.
+    // The batch is 3 groups, not 4: definitions, their merged examples
+    // (one sense-owned, one assigned), and phrases.
     vi.mocked(lookupFreeDictionary).mockResolvedValue(
       makeResult([defEntry('Def one.', 'Ex one.'), defEntry('Def two.')]),
     );
     vi.mocked(fetchTatoebaExamples).mockResolvedValue(['Sup one.', 'Sup two.']);
     // Hold every translation unresolved until the test releases them, then
-    // assert all segments (2 definitions + 1 sense example + 2 supplements
-    // + 2 phrases) were requested at once. A chained implementation stalls
-    // below the expected count and fails the waitFor with a clear
-    // "expected 2 to be 7" diff.
-    const expectedSegments = 7;
+    // assert all segments (2 definitions + 2 examples + 2 phrases) were
+    // requested at once. A chained implementation stalls below the
+    // expected count and fails the waitFor with a clear "expected 2 to be
+    // 6" diff; a regression that still translates the dropped 'Sup two.'
+    // fails it the other way ("expected 7 to be 6").
+    const expectedSegments = 6;
     let issued = 0;
     let releaseAll!: () => void;
     const allIssued = new Promise<void>((resolve) => {
@@ -489,6 +531,7 @@ describe('lookupTerm example enrichment', () => {
     releaseAll();
     const outcome = await pending;
     expect(issued).toBe(expectedSegments);
+    expect(translateSegment).not.toHaveBeenCalledWith('Sup two.');
     // The Datamuse phrases belong to the same single batch.
     expect(translateSegment).toHaveBeenCalledWith('give in');
     expect(translateSegment).toHaveBeenCalledWith('give away');
@@ -505,12 +548,8 @@ describe('lookupTerm example enrichment', () => {
           partOfSpeech: 'verb',
           definition: 'Def two.',
           definitionZh: '中文：Def two.',
-          example: null,
+          example: { en: 'Sup one.', zh: '中文：Sup one.' },
         },
-      ]);
-      expect(outcome.result.examples).toEqual([
-        { en: 'Sup one.', zh: '中文：Sup one.' },
-        { en: 'Sup two.', zh: '中文：Sup two.' },
       ]);
       expect(outcome.result.relatedPhrases).toEqual([
         { en: 'give in', zh: '中文：give in' },
@@ -521,7 +560,7 @@ describe('lookupTerm example enrichment', () => {
 });
 
 describe('lookupTerm related-phrase enrichment', () => {
-  it('gathers Tatoeba and Datamuse in parallel, then glosses all four segment groups in a single translation wave', async () => {
+  it('gathers Tatoeba and Datamuse in parallel, then glosses all three segment groups in a single translation wave', async () => {
     // One sense example forces Tatoeba supplementation, so the gathering
     // wave has two arms. Hold both open: each must have started while the
     // other is still unresolved, and no translation may be requested before
@@ -572,8 +611,8 @@ describe('lookupTerm related-phrase enrichment', () => {
     expect(segmentsIssued).toBe(0);
     releaseTatoeba();
     releasePhrases();
-    // One batch covers all four segment groups at once: 2 definitions +
-    // 1 sense example + 1 supplement + 1 phrase.
+    // One batch covers all three segment groups at once: 2 definitions +
+    // 2 examples (def[0]'s own, def[1]'s assigned supplement) + 1 phrase.
     await vi.waitFor(() => expect(segmentsIssued).toBe(5));
     releaseSegments();
     const outcome = await pending;
@@ -581,7 +620,8 @@ describe('lookupTerm related-phrase enrichment', () => {
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       expect(outcome.result.definitions[0].definitionZh).toBe('中文：Def one.');
-      expect(outcome.result.examples).toEqual([
+      expect(outcome.result.definitions.map((d) => d.example)).toEqual([
+        { en: 'Ex one.', zh: '中文：Ex one.' },
         { en: 'Sup one.', zh: '中文：Sup one.' },
       ]);
       expect(outcome.result.relatedPhrases).toEqual([
@@ -643,7 +683,6 @@ describe('lookupTerm related-phrase enrichment', () => {
     if (outcome.ok) {
       expect(outcome.result.relatedPhrases).toEqual([]);
       expect(outcome.result.definitions).toEqual(sufficientSenses());
-      expect(outcome.result.examples).toEqual([]);
     }
     // An empty phrase group contributes zero segments to the batch:
     // 2 definitions + 2 sense examples only.

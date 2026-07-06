@@ -19,10 +19,6 @@ const full: LookupResult = {
       example: null,
     },
   ],
-  examples: [
-    { en: 'Never give up hope.', zh: '永不放棄希望。' },
-    { en: 'Do not give up now.', zh: null },
-  ],
   synonyms: ['surrender', 'quit'],
   antonyms: ['persist'],
   relatedPhrases: [
@@ -67,11 +63,8 @@ describe('buildAnkiNote', () => {
     expect(back).toContain('(verb) To stop or quit.');
   });
 
-  it('assembles supplements, synonyms, antonyms, and glossed phrases on the back', () => {
+  it('assembles synonyms, antonyms, and glossed phrases on the back', () => {
     const back = buildAnkiNote(full).fields.Back;
-    expect(back).toContain('更多例句');
-    expect(back).toContain('<i>Never give up hope.</i><br>永不放棄希望。');
-    expect(back).toContain('<i>Do not give up now.</i>');
     expect(back).toContain('同義');
     expect(back).toContain('surrender, quit');
     expect(back).toContain('反義');
@@ -84,13 +77,12 @@ describe('buildAnkiNote', () => {
   it('omits every empty block from the back', () => {
     const note = buildAnkiNote({
       ...full,
-      examples: [],
       synonyms: [],
       antonyms: [],
       relatedPhrases: [],
     });
     expect(note.fields.Back).toContain('釋義');
-    for (const label of ['更多例句', '同義', '反義', '片語']) {
+    for (const label of ['同義', '反義', '片語']) {
       expect(note.fields.Back).not.toContain(label);
     }
   });
@@ -104,7 +96,6 @@ describe('buildAnkiNote', () => {
     const note = buildAnkiNote({
       ...full,
       definitions: [full.definitions[1]],
-      examples: [],
       synonyms: [],
       antonyms: [],
       relatedPhrases: [],
@@ -126,7 +117,6 @@ describe('buildAnkiNote', () => {
           example: { en: 'a & b', zh: 'c < d' },
         },
       ],
-      examples: [{ en: '1 < 2 & 3', zh: null }],
       synonyms: ['R&B'],
       antonyms: [],
       relatedPhrases: [{ en: 'rock & roll', zh: '搖<滾>' }],
@@ -138,7 +128,6 @@ describe('buildAnkiNote', () => {
     expect(back).toContain('Tom &amp; Jerry &lt;script&gt;');
     expect(back).toContain('湯姆&lt;與&gt;傑利');
     expect(back).toContain('<i>a &amp; b</i><br>c &lt; d');
-    expect(back).toContain('1 &lt; 2 &amp; 3');
     expect(back).toContain('R&amp;B');
     expect(back).toContain('rock &amp; roll — 搖&lt;滾&gt;');
   });

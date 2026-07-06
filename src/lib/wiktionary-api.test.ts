@@ -37,8 +37,6 @@ describe('lookupWiktionary', () => {
         example: { en: 'I think my sewing machine has kicked the bucket.', zh: null },
       },
     ]);
-    // No flattening: result-level examples hold only lookup-service supplements.
-    expect(result!.examples).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('<');
     // Wiktionary provides no thesaurus data; the lists are always empty.
     expect(result!.synonyms).toEqual([]);
@@ -105,7 +103,6 @@ describe('lookupWiktionary', () => {
         example: null,
       },
     ]);
-    expect(result!.examples).toEqual([]);
   });
 
   it('converts spaces to underscores in the page URL', async () => {

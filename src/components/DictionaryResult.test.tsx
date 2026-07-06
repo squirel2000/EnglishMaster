@@ -21,11 +21,6 @@ const sample: LookupResult = {
       example: null,
     },
   ],
-  // Term-level supplements (更多例句), never attributed to a sense.
-  examples: [
-    { en: 'Never give up hope.', zh: '永不放棄希望。' },
-    { en: 'Do not give up now.', zh: null },
-  ],
   synonyms: ['surrender', 'quit', 'abandon'],
   antonyms: ['persist', 'continue'],
   relatedPhrases: [
@@ -42,14 +37,13 @@ afterEach(() => {
 });
 
 describe('DictionaryResult', () => {
-  it('renders term, phonetic, definitions with part of speech, sense examples, and supplements', () => {
+  it('renders term, phonetic, definitions with part of speech, and sense examples', () => {
     render(<DictionaryResult result={sample} />);
     expect(screen.getByRole('heading', { name: 'give up' })).toBeInTheDocument();
     expect(screen.getByText('/ɡɪv ʌp/')).toBeInTheDocument();
     expect(screen.getByText('To surrender.')).toBeInTheDocument();
     expect(screen.getAllByText('verb').length).toBeGreaterThan(0);
     expect(screen.getByText('They gave up the search.')).toBeInTheDocument();
-    expect(screen.getByText('Never give up hope.')).toBeInTheDocument();
   });
 
   it('shows the Chinese translation as the primary text with the English original alongside', () => {
@@ -139,56 +133,16 @@ describe('DictionaryResult', () => {
     expect(screen.queryByText(/^\//)).not.toBeInTheDocument();
   });
 
-  it('shows supplemental examples under a 更多例句 heading', () => {
-    render(<DictionaryResult result={sample} />);
-    expect(screen.getByText('更多例句')).toBeInTheDocument();
-    expect(screen.getByText('Never give up hope.')).toBeInTheDocument();
-    expect(screen.getByText('Do not give up now.')).toBeInTheDocument();
-  });
-
-  it('omits the 更多例句 section when there are no supplements, keeping sense examples', () => {
-    render(<DictionaryResult result={{ ...sample, examples: [] }} />);
-    expect(screen.queryByText('更多例句')).not.toBeInTheDocument();
-    // The sense example belongs to its definition and stays visible.
-    expect(screen.getByText('They gave up the search.')).toBeInTheDocument();
-  });
-
-  it('shows each supplement as the English original with the Chinese translation beneath', () => {
-    render(<DictionaryResult result={sample} />);
-    const item = screen.getByText('Never give up hope.').closest('li');
-    expect(item).not.toBeNull();
-    const en = item!.querySelector('.example-en');
-    const zh = item!.querySelector('.example-zh');
-    expect(en).toHaveTextContent('Never give up hope.');
-    expect(zh).toHaveTextContent('永不放棄希望。');
-    // The English original leads; the Chinese aid follows.
-    expect(
-      en!.compareDocumentPosition(zh!) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it('falls back to English-only for a supplement without a Chinese translation', () => {
-    render(<DictionaryResult result={sample} />);
-    const item = screen.getByText('Do not give up now.').closest('li');
-    expect(item).not.toBeNull();
-    expect(item!.querySelector('.example-zh')).toBeNull();
-  });
-
-  it('renders synonym and antonym sections after the supplemental examples', () => {
+  it('renders synonym and antonym sections after the definitions', () => {
     render(<DictionaryResult result={sample} />);
     expect(screen.getByText('同義')).toBeInTheDocument();
     expect(screen.getByText('反義')).toBeInTheDocument();
     for (const word of ['surrender', 'quit', 'abandon', 'persist', 'continue']) {
       expect(screen.getByText(word)).toBeInTheDocument();
     }
-    // Card order: supplements first, then synonyms, then antonyms.
-    const examplesHeading = screen.getByText('更多例句');
+    // Card order: definitions, then synonyms, then antonyms.
     const synonymsHeading = screen.getByText('同義');
     const antonymsHeading = screen.getByText('反義');
-    expect(
-      examplesHeading.compareDocumentPosition(synonymsHeading) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
     expect(
       synonymsHeading.compareDocumentPosition(antonymsHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -309,9 +263,5 @@ describe('DictionaryResult', () => {
     // Sense example: bilingual pair.
     expect(screen.getByText('They gave up the search.')).toHaveAttribute('lang', 'en');
     expect(screen.getByText('他們放棄了搜尋。')).toHaveAttribute('lang', 'zh-Hant');
-    // Supplements: bilingual pair plus the English-only fallback.
-    expect(screen.getByText('Never give up hope.')).toHaveAttribute('lang', 'en');
-    expect(screen.getByText('永不放棄希望。')).toHaveAttribute('lang', 'zh-Hant');
-    expect(screen.getByText('Do not give up now.')).toHaveAttribute('lang', 'en');
   });
 });

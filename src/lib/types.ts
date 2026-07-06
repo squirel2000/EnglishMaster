@@ -35,14 +35,14 @@ export interface DefinitionEntry {
 export interface LookupResult {
   term: string;
   pronunciation: Pronunciation;
-  definitions: DefinitionEntry[];
   /**
-   * Supplemental examples (更多例句): term-level sentences added by
-   * lookup-service (Tatoeba) when the displayed senses carry fewer than two
-   * examples of their own. Never attributed to a specific sense; normalizers
-   * always emit an empty list.
+   * Displayed senses. Each carries at most one example in `.example`: either
+   * the source's own example for that sense, or — when the sense had none —
+   * a Tatoeba supplement positionally assigned by lookup-service in display
+   * order. There is no separate example list; every visible example lives
+   * on a definition.
    */
-  examples: ExampleEntry[];
+  definitions: DefinitionEntry[];
   /** English synonyms aggregated from the source, deduped, at most 8 */
   synonyms: string[];
   /** English antonyms aggregated from the source, deduped, at most 8 */

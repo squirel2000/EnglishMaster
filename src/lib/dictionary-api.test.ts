@@ -43,12 +43,6 @@ describe('lookupFreeDictionary', () => {
     });
   });
 
-  it('no longer flattens sense examples into the result-level list (it holds only lookup-service supplements)', async () => {
-    stubFetch(200, helloFixture);
-    const result = await lookupFreeDictionary('hello');
-    expect(result!.examples).toEqual([]);
-  });
-
   it('returns null audio when no US recording exists', async () => {
     const noUs = structuredClone(helloFixture);
     noUs[0].phonetics = noUs[0].phonetics.filter(

@@ -50,9 +50,9 @@ export function isAnkiLinked(): boolean {
  *
  * Front: the term in bold plus its phonetic when available. Back: simple
  * semantic HTML (bold block labels, lists) readable inside an Anki card —
- * bilingual definitions with their sense examples, supplemental examples
- * (更多例句), synonyms, antonyms, and glossed phrases. A block whose data
- * is empty is omitted entirely.
+ * bilingual definitions with their examples (a sense's own, or a Tatoeba
+ * supplement assigned to it upstream), synonyms, antonyms, and glossed
+ * phrases. A block whose data is empty is omitted entirely.
  */
 export function buildAnkiNote(result: LookupResult): AnkiNote {
   return {
@@ -84,11 +84,6 @@ function buildBack(result: LookupResult): string {
       return `<li>(${escapeHtml(entry.partOfSpeech)}) ${sense}${example}</li>`;
     });
     blocks.push(block('釋義', `<ol>${items.join('')}</ol>`));
-  }
-
-  if (result.examples.length > 0) {
-    const items = result.examples.map((example) => `<li>${exampleHtml(example)}</li>`);
-    blocks.push(block('更多例句', `<ul>${items.join('')}</ul>`));
   }
 
   if (result.synonyms.length > 0) {

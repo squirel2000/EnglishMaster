@@ -70,8 +70,13 @@ export async function lookupTerm(term: string): Promise<LookupOutcome> {
   return { ok: true, result: translated };
 }
 
-/** The examples attached to the displayed senses, in definition order. */
-function senseExamplesOf(result: LookupResult): ExampleEntry[] {
+/**
+ * The examples currently attached to the displayed definitions, in
+ * definition order. Before assignment this is sense-owned examples only;
+ * after `withSupplementalExamples` runs, positionally-assigned Tatoeba
+ * supplements are indistinguishable from a sense's own and are included too.
+ */
+function examplesOf(result: LookupResult): ExampleEntry[] {
   return result.definitions.flatMap((entry) =>
     entry.example ? [entry.example] : [],
   );
@@ -81,18 +86,22 @@ function senseExamplesOf(result: LookupResult): ExampleEntry[] {
  * Guarantee 2-3 visible example sentences per entry. Sense examples on the
  * displayed definitions count first; only when they number fewer than
  * MIN_TOTAL_EXAMPLES does Tatoeba fill the gap with term-level supplemental
- * examples (更多例句), deduped on the English sentence against the sense
- * examples and one another. Supplements are never attributed to a specific
- * sense: Tatoeba sentences are term-level data, so pinning one to a sense
- * would fake an attribution the source never made.
+ * sentences, deduped on the English sentence against the sense examples and
+ * one another. Unlike the source's own sense examples, Tatoeba sentences
+ * carry no sense attribution, so a supplement is assigned to the next
+ * example-less definition in *display* order — not fetch order — making its
+ * presentation indistinguishable from a sense's own example. Definitions
+ * that already have one are left untouched; any definitions still without
+ * one when supplements run out simply stay that way (no crash, no partial
+ * state).
  */
 async function withSupplementalExamples(
   term: string,
   result: LookupResult,
 ): Promise<LookupResult> {
-  const senseExamples = senseExamplesOf(result);
+  const senseExamples = examplesOf(result);
   if (senseExamples.length >= MIN_TOTAL_EXAMPLES) {
-    return { ...result, examples: [] };
+    return result;
   }
   try {
     const candidates = await fetchTatoebaExamples(
@@ -110,34 +119,39 @@ async function withSupplementalExamples(
       // combined batch later.
       supplements.push({ en, zh: null });
     }
-    return { ...result, examples: supplements };
+    let nextSupplement = 0;
+    return {
+      ...result,
+      definitions: result.definitions.map((entry) => {
+        if (entry.example || nextSupplement >= supplements.length) return entry;
+        return { ...entry, example: supplements[nextSupplement++] };
+      }),
+    };
   } catch {
     // Supplementation must never break an otherwise successful lookup.
-    return { ...result, examples: [] };
+    return result;
   }
 }
 
 /**
  * Translate every displayed text segment to Traditional Chinese in one
- * parallel batch: the (already truncated) definitions, their attached sense
- * examples, the supplemental examples, and the related phrases — at most
- * 5 definitions + 5 examples (sense and supplements combined) + 6 phrases
- * per lookup. Translation is best-effort: a failed or quota-exhausted
- * segment leaves its Chinese text null and must never fail the lookup
- * itself.
+ * parallel batch: the (already truncated) definitions, their attached
+ * examples (a sense's own, or a positionally-assigned Tatoeba supplement —
+ * indistinguishable by this point), and the related phrases — at most
+ * 5 definitions + 5 examples + 6 phrases per lookup. Translation is
+ * best-effort: a failed or quota-exhausted segment leaves its Chinese text
+ * null and must never fail the lookup itself.
  */
 async function withTranslations(result: LookupResult): Promise<LookupResult> {
-  const senseExamples = senseExamplesOf(result);
-  // Segment layout: [0, senseBase) definitions, [senseBase, supplementBase)
-  // sense examples in definition order, [supplementBase, phraseBase)
-  // supplements, [phraseBase, ...) related phrases.
+  const examples = examplesOf(result);
+  // Segment layout: [0, senseBase) definitions, [senseBase, phraseBase)
+  // examples in definition order (sparse: only definitions that carry one
+  // contribute a segment), [phraseBase, ...) related phrases.
   const senseBase = result.definitions.length;
-  const supplementBase = senseBase + senseExamples.length;
-  const phraseBase = supplementBase + result.examples.length;
+  const phraseBase = senseBase + examples.length;
   const segments = [
     ...result.definitions.map((entry) => entry.definition),
-    ...senseExamples.map((example) => example.en),
-    ...result.examples.map((example) => example.en),
+    ...examples.map((example) => example.en),
     ...result.relatedPhrases.map((phrase) => phrase.en),
   ];
   const outcomes = await Promise.allSettled(
@@ -149,21 +163,17 @@ async function withTranslations(result: LookupResult): Promise<LookupResult> {
       ? outcome.value.result.translated
       : null;
   };
-  // Walks the sense-example segment group in step with the definitions that
-  // carry an example, mirroring the order senseExamplesOf() emitted them in.
-  let senseIndex = senseBase;
+  // Walks the example segment group in step with the definitions that carry
+  // one, mirroring the order examplesOf() emitted them in.
+  let exampleIndex = senseBase;
   return {
     ...result,
     definitions: result.definitions.map((entry, index) => ({
       ...entry,
       definitionZh: zhFor(index),
       example: entry.example
-        ? { ...entry.example, zh: zhFor(senseIndex++) }
+        ? { ...entry.example, zh: zhFor(exampleIndex++) }
         : null,
-    })),
-    examples: result.examples.map((example, index) => ({
-      ...example,
-      zh: zhFor(supplementBase + index),
     })),
     relatedPhrases: result.relatedPhrases.map((phrase, index) => ({
       ...phrase,

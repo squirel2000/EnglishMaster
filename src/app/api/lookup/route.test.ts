@@ -17,8 +17,6 @@ const sample: LookupResult = {
       example: { en: 'Hello, everyone.', zh: '哈囉，大家好。' },
     },
   ],
-  // Term-level supplements (更多例句).
-  examples: [{ en: 'Hello? Is anyone there?', zh: null }],
   synonyms: ['hi', 'greetings'],
   antonyms: ['goodbye'],
   relatedPhrases: [{ en: 'hello there', zh: '你好啊' }],
